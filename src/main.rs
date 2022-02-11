@@ -2,10 +2,10 @@ extern crate clap;
 extern crate nix;
 
 mod cli;
-mod compile;
+mod command;
 mod executor;
 
-use compile::{compile, CompileOption};
+use command::{compile, CompileOption, run, RunOption};
 
 fn main() {
     let matches = cli::init().get_matches();
@@ -28,8 +28,20 @@ fn main() {
                 println!("no");
             }
         }
-        ("run", Some(_sub_matches)) => {
-            // TODO: implement execute command
+        ("run", Some(sub_matches)) => {
+            let language = sub_matches.value_of("language").unwrap().to_string();
+            let binary_path = sub_matches.value_of("bin").unwrap().to_string();
+            let option = RunOption {
+                language,
+                binary_path,
+            };
+            
+            let succeed = run(option);
+            if succeed == 0 {
+                println!("run ok");
+            } else {
+                println!("run fail");
+            }
         }
         _ => {
             panic!("no subcommand given")

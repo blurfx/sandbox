@@ -9,9 +9,15 @@ pub struct CompileOption {
     pub output_path: String,
 }
 
+pub struct RunOption {
+    pub language: String,
+    pub binary_path: String,
+}
+
 enum FlagToken {
     INPUT,
-    OUTPUT
+    OUTPUT,
+    BINARY,
 }
 
 impl FlagToken {
@@ -19,14 +25,25 @@ impl FlagToken {
         match *self {
             FlagToken::INPUT => "<INPUT>",
             FlagToken::OUTPUT => "<OUTPUT>",
+            FlagToken::BINARY => "<BINARY>",
         }
     }
 }
 
 fn get_compile_flags(language: &str) -> Option<(&str, Vec<&str>)> {
     let map: HashMap<&str, (&str, Vec<&str>)> = [
-        ("cpp", ("g++", vec![FlagToken::INPUT.value(), "-O2", "-Wall", "-lm", "-o", FlagToken::OUTPUT.value()])),
         ("c", ("gcc", vec![FlagToken::INPUT.value(), "-O2", "-Wall", "-lm", "-o", FlagToken::OUTPUT.value()])),
+        ("cpp", ("g++", vec![FlagToken::INPUT.value(), "-O2", "-Wall", "-lm", "-o", FlagToken::OUTPUT.value()])),
+    ].iter().cloned().collect();
+
+    map.get(language).cloned()
+}
+
+fn get_run_flags(language: &str) -> Option<Vec<&str>> {
+    let map: HashMap<&str, Vec<&str>> = [
+        ("c", vec![FlagToken::BINARY.value()]),
+        ("cpp", vec![FlagToken::BINARY.value()]),
+        ("java", vec!["java", FlagToken::BINARY.value()]),
     ].iter().cloned().collect();
 
     map.get(language).cloned()
@@ -51,8 +68,28 @@ pub fn compile(opt: CompileOption) -> i32 {
         } else if *arg == FlagToken::OUTPUT.value() {
             return opt.output_path.as_str();
         }
-        return *arg;
+        
+        *arg
     }).collect();
 
     execute(compiler, compile_args)
+}
+
+pub fn run(opt: RunOption) -> i32 {
+    let args = match get_run_flags(&opt.language) {
+        Some(args) => args,
+        None => {
+            panic!("unsupported language: {}", opt.language);
+        }
+    };
+
+    let args: Vec<&str> = args.iter().map(|arg| {
+        if *arg == FlagToken::BINARY.value() {
+            return opt.binary_path.as_str();
+        } 
+
+        *arg
+    }).collect();
+
+    execute(&opt.binary_path, args)
 }
