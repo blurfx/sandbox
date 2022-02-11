@@ -8,7 +8,6 @@ use nix::unistd::ForkResult::{Child, Parent};
 
 pub fn execute(binary: &str, args: Vec<&str>) -> i32 {
     let pid = unsafe { fork() };
-    let mut code = 50000;
 
     match pid {
         Ok(Child) => {
@@ -49,15 +48,12 @@ pub fn execute(binary: &str, args: Vec<&str>) -> i32 {
                     continue;
                 }
                 println!("exit code : {}", status);
-                code = status;
-                break;
+                return status;
             }
         }
         Err(err) => {
             eprintln!("{:?}", err);
-            code = 50000;
+            return 50000;
         }
     }
-
-    code
 }
