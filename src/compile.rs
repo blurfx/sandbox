@@ -3,6 +3,7 @@ use std::io::{self, Write};
 use std::process::{Command};
 use std::vec::Vec;
 use nix::fcntl::{open, OFlag};
+use nix::libc::{wait4, WNOHANG};
 use nix::sys::stat::Mode;
 use nix::unistd::{fork, dup2};
 use nix::unistd::ForkResult::{Child, Parent};
@@ -36,9 +37,9 @@ fn get_compile_flags(language: &str) -> Option<(&str, Vec<&str>)> {
     map.get(language).cloned()
 }
 
-pub fn compile(opt: CompileOption) -> bool {
+pub fn compile(opt: CompileOption) -> i32 {
     let pid = unsafe { fork() };
-    let mut succeed = true;
+    let mut code = 50000;
 
     match pid {
         Ok(Child) => {
@@ -76,18 +77,32 @@ pub fn compile(opt: CompileOption) -> bool {
                 Ok(o) => {
                     io::stdout().write_all(&o.stdout).unwrap();
                     io::stderr().write_all(&o.stderr).unwrap();
-                    succeed = o.status.success();
+                    std::process::exit(o.status.code().unwrap());
                 }
                 Err(e) => {
-                    println!("{:?}", e);
+                    eprintln!("{:?}", e);
+                    std::process::exit(50000);
                 }
+                
             }
         }
-        Ok(Parent { .. }) => {
+        Ok(Parent { child }) => {
+            let mut status = 0;
+            let mut rusage= std::mem::MaybeUninit::zeroed();
+            loop {
+                let child_pid = child.as_raw();
+                let wait_result = unsafe { wait4(child_pid, & mut status, WNOHANG, rusage.as_mut_ptr()) };
+                if wait_result == 0 {
+                    continue;
+                }
+
+                code = status;
+                break;
+            }
         }
         _ => {
         }
     }
 
-    succeed
+    code
 }

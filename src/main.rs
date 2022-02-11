@@ -21,7 +21,7 @@ fn main() {
             };
 
             let succeed = compile(option);
-            if succeed {
+            if succeed == 0{
                 println!("ok");
             } else {
                 println!("no");
