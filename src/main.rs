@@ -3,6 +3,7 @@ extern crate nix;
 
 mod cli;
 mod compile;
+mod executor;
 
 use compile::{compile, CompileOption};
 
