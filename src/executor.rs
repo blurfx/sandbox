@@ -1,9 +1,11 @@
 use std::io::{self, Write};
-use std::process::Command;
+use std::process::{Command};
 
 use nix::libc::{waitpid, WNOHANG, getrusage, RUSAGE_CHILDREN, usleep};
 use nix::unistd::fork;
 use nix::unistd::ForkResult::{Child, Parent};
+
+use crate::exit_code::ExitCode;
 
 
 pub fn execute(binary: &str, args: Vec<&str>) -> i32 {
@@ -24,7 +26,7 @@ pub fn execute(binary: &str, args: Vec<&str>) -> i32 {
                 }
                 Err(e) => {
                     eprintln!("{:?}", e);
-                    std::process::exit(50000);
+                    std::process::exit(e.raw_os_error().unwrap());
                 }
             }
         }
@@ -53,7 +55,7 @@ pub fn execute(binary: &str, args: Vec<&str>) -> i32 {
         }
         Err(err) => {
             eprintln!("{:?}", err);
-            return 50000;
+            return ExitCode::UNKNOWN as i32;
         }
     }
 }

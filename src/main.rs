@@ -4,6 +4,7 @@ extern crate nix;
 mod cli;
 mod command;
 mod executor;
+mod exit_code;
 
 use command::{compile, CompileOption, run, RunOption};
 
