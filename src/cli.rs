@@ -52,6 +52,18 @@ fn add_run_command<'a>(app: App<'a, 'a>) -> App<'a, 'a> {
             .takes_value(true)
             .required(true)
         )
+        .arg(Arg::with_name("memory_limit")
+            .long("memory")
+            .help("memory limit in bytes")
+            .takes_value(true)
+            .required(true)
+        )
+        .arg(Arg::with_name("time_limit")
+            .long("time")
+            .help("runtime limit in second")
+            .takes_value(true)
+            .required(true)
+        )
     )
 }
 

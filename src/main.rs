@@ -1,5 +1,6 @@
 extern crate clap;
 extern crate nix;
+extern crate core;
 
 mod cli;
 mod command;
@@ -32,9 +33,14 @@ fn main() {
         ("run", Some(sub_matches)) => {
             let language = sub_matches.value_of("language").unwrap().to_string();
             let binary_path = sub_matches.value_of("bin").unwrap().to_string();
+            let time_limit: u64 = sub_matches.value_of("time_limit").unwrap().parse().unwrap();
+            let memory_limit: u64 = sub_matches.value_of("memory_limit").unwrap().parse().unwrap();
+
             let option = RunOption {
                 language,
                 binary_path,
+                time_limit,
+                memory_limit,
             };
             
             let succeed = run(option);

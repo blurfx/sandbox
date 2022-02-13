@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::vec::Vec;
 
-use crate::executor::execute;
+use crate::executor::{execute, ResourceLimit};
 
 pub struct CompileOption {
     pub language: String,
@@ -12,6 +12,8 @@ pub struct CompileOption {
 pub struct RunOption {
     pub language: String,
     pub binary_path: String,
+    pub time_limit: u64,
+    pub memory_limit: u64,
 }
 
 enum FlagToken {
@@ -32,8 +34,8 @@ impl FlagToken {
 
 fn get_compile_flags(language: &str) -> Option<(&str, Vec<&str>)> {
     let map: HashMap<&str, (&str, Vec<&str>)> = [
-        ("c", ("gcc", vec![FlagToken::INPUT.value(), "-O2", "-Wall", "-lm", "-o", FlagToken::OUTPUT.value()])),
-        ("cpp", ("g++", vec![FlagToken::INPUT.value(), "-O2", "-Wall", "-lm", "-o", FlagToken::OUTPUT.value()])),
+        ("c", ("/usr/bin/gcc", vec!["gcc", FlagToken::INPUT.value(), "-O2", "-Wall", "-lm", "-o", FlagToken::OUTPUT.value()])),
+        ("cpp", ("/usr/bin/g++", vec!["g++", FlagToken::INPUT.value(), "-O2", "-Wall", "-lm", "-o", FlagToken::OUTPUT.value()])),
     ].iter().cloned().collect();
 
     map.get(language).cloned()
@@ -72,7 +74,9 @@ pub fn compile(opt: CompileOption) -> i32 {
         *arg
     }).collect();
 
-    execute(compiler, compile_args)
+    println!("{:?}", compile_args);
+
+    execute(compiler, compile_args, None)
 }
 
 pub fn run(opt: RunOption) -> i32 {
@@ -91,5 +95,10 @@ pub fn run(opt: RunOption) -> i32 {
         *arg
     }).collect();
 
-    execute(&opt.binary_path, args)
+    let rlimit = ResourceLimit {
+        time: opt.time_limit,
+        memory: opt.memory_limit,
+    };
+
+    execute(&opt.binary_path, args, Some(rlimit))
 }
