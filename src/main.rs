@@ -6,6 +6,7 @@ mod cli;
 mod command;
 mod executor;
 mod exit_code;
+mod process;
 
 use command::{compile, CompileOption, run, RunOption};
 

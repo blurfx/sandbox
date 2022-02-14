@@ -1,36 +1,13 @@
-use std::convert::TryInto;
-use std::ffi::CString;
-
-use nix::libc::{waitpid, WNOHANG, getrusage, RUSAGE_CHILDREN, usleep, setrlimit, rlimit, self};
+use nix::libc::{waitpid, WNOHANG, getrusage, RUSAGE_CHILDREN, usleep};
 use nix::unistd::fork;
 use nix::unistd::ForkResult::{Child, Parent};
+
 use crate::exit_code::ExitCode;
+use crate::process::{Process, Resource};
 
 pub struct ResourceLimit {
     pub memory: u64,
     pub time: u64,
-}
-
-#[repr(u32)]
-enum Resource {
-    AddressSpace = libc::RLIMIT_AS as u32,
-    CPUTime = libc::RLIMIT_CPU as u32,
-    CoreDump = libc::RLIMIT_CORE as u32,
-}
-
-fn set_resource_limit(resource: Resource, value: u64) -> Result<(), nix::Error> {
-    let resource_id = (resource as u32).try_into().unwrap();
-    let ret = unsafe {
-        setrlimit(resource_id, &rlimit {
-            rlim_cur: value,
-            rlim_max: value,
-        })
-    };
-    if ret == 0 {
-        Ok(())
-    } else {
-        Err(nix::Error::last())
-    }
 }
 
 pub fn execute(binary: &str, args: Vec<&str>, limits: Option<ResourceLimit>) -> i32 {
@@ -38,45 +15,19 @@ pub fn execute(binary: &str, args: Vec<&str>, limits: Option<ResourceLimit>) -> 
 
     match pid {
         Ok(Child) => {
-            let path = CString::new(binary).unwrap();
-
-            let args = args.iter()
-                .map(|arg| CString::new(arg.clone()).unwrap())
-                .collect::<Vec<CString>>();
-
-            let mut envs: Vec<CString> = vec![];
-            for (name, value) in std::env::vars() {
-                envs.push(CString::new(format!("{}={}", name, value)).unwrap());
-            }
-
-            println!("path: {:?}", path);
-
+            let mut process = Process::new(binary.to_string())
+            .args(args);
+            
             if limits.is_some() {
                 let limits = limits.unwrap();
 
-                if set_resource_limit(Resource::AddressSpace, limits.memory).is_err() {
-                    panic!("set memory limit failed");
-                }
-
-                if set_resource_limit(Resource::CPUTime, limits.time).is_err() {
-                    panic!("set cpu time limit failed");
-                }
+                process = process
+                    .limit(Resource::AddressSpace, limits.memory)
+                    .limit(Resource::CPUTime, limits.time)
+                    .limit(Resource::CoreDump, 0);
             }
 
-            if set_resource_limit(Resource::CoreDump, 0).is_err() {
-                panic!("set core dump size limit failed")
-            }
-
-            match nix::unistd::execv(&path, args.as_ref()) {
-                Ok(_) => {
-                    println!("execve ok");
-                    0
-                }
-                Err(e) => {
-                    println!("execve failed: {}", e);
-                    50000
-                }
-            }
+            process.run()
         }
         Ok(Parent{ child }) => {
             let mut status = 0;
