@@ -54,7 +54,7 @@ fn main() {
             }
         }
         _ => {
-            unreachable!("no validsubcommand given")
+            unreachable!("no valid subcommand given")
         }
     }
 }
