@@ -10,14 +10,18 @@ pub struct ResourceLimit {
     pub time: u64,
 }
 
-pub fn execute(binary: &str, args: Vec<&str>, limits: Option<ResourceLimit>) -> i32 {
+pub fn execute(binary: &str, args: Vec<&str>, envs: Option<Vec<&str>>, limits: Option<ResourceLimit>) -> i32 {
     let pid = unsafe { fork() };
 
     match pid {
         Ok(Child) => {
             let mut process = Process::new(binary.to_string())
             .args(args);
-            
+
+            if envs.is_some() {
+                process = process.envs(envs.unwrap());
+            }
+
             if limits.is_some() {
                 let limits = limits.unwrap();
 

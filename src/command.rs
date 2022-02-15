@@ -9,11 +9,12 @@ pub struct CompileOption {
     pub output_path: String,
 }
 
-pub struct RunOption {
+pub struct RunOption<'a> {
     pub language: String,
-    pub binary_path: String,
+    pub file_path: String,
     pub time_limit: u64,
     pub memory_limit: u64,
+    pub envs: Vec<&'a str>,
 }
 
 enum FlagToken {
@@ -34,8 +35,8 @@ impl FlagToken {
 
 fn get_compile_flags(language: &str) -> Option<(&str, Vec<&str>)> {
     let map: HashMap<&str, (&str, Vec<&str>)> = [
-        ("c", ("/usr/bin/gcc", vec!["gcc", FlagToken::INPUT.value(), "-O2", "-Wall", "-lm", "-o", FlagToken::OUTPUT.value()])),
-        ("cpp", ("/usr/bin/g++", vec!["g++", FlagToken::INPUT.value(), "-O2", "-Wall", "-lm", "-o", FlagToken::OUTPUT.value()])),
+        ("c", ("gcc", vec![FlagToken::INPUT.value(), "-O2", "-Wall", "-lm", "-o", FlagToken::OUTPUT.value()])),
+        ("cpp", ("g++", vec![FlagToken::INPUT.value(), "-O2", "-Wall", "-lm", "-o", FlagToken::OUTPUT.value()])),
     ].iter().cloned().collect();
 
     map.get(language).cloned()
@@ -76,7 +77,7 @@ pub fn compile(opt: CompileOption) -> i32 {
 
     println!("{:?}", compile_args);
 
-    execute(compiler, compile_args, None)
+    execute(compiler, compile_args, None, None)
 }
 
 pub fn run(opt: RunOption) -> i32 {
@@ -89,7 +90,7 @@ pub fn run(opt: RunOption) -> i32 {
 
     let args: Vec<&str> = args.iter().map(|arg| {
         if *arg == FlagToken::BINARY.value() {
-            return opt.binary_path.as_str();
+            return opt.file_path.as_str();
         } 
 
         *arg
@@ -100,5 +101,5 @@ pub fn run(opt: RunOption) -> i32 {
         memory: opt.memory_limit,
     };
 
-    execute(&opt.binary_path, args, Some(rlimit))
+    execute(&opt.file_path, args, Some(opt.envs.clone()), Some(rlimit))
 }

@@ -12,6 +12,7 @@ pub enum Resource {
 pub struct Process {
     path: CString,
     args: Vec<CString>,
+    envs: Vec<CString>,
 }
 
 impl Process {
@@ -21,12 +22,20 @@ impl Process {
         Process {
             path,
             args: vec![],
+            envs: vec![],
         }
     }
 
     pub fn args(mut self, args: Vec<&str>) -> Self {
          self.args = args.iter()
                 .map(|arg| CString::new(arg.clone()).unwrap())
+                .collect::<Vec<CString>>();
+        self
+    }
+
+    pub fn envs(mut self, envs: Vec<&str>) -> Self {
+        self.envs = envs.iter()
+                .map(|env| CString::new(format!("{}", env)).unwrap())
                 .collect::<Vec<CString>>();
         self
     }
@@ -46,7 +55,7 @@ impl Process {
     }
 
     pub fn run(self) -> i32 {
-        match nix::unistd::execv(&self.path, self.args.as_ref()) {
+        match nix::unistd::execve(&self.path, self.args.as_ref(), self.envs.as_ref()) {
             Ok(_) => {
                 println!("execve ok");
                 0
