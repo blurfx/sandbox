@@ -9,10 +9,13 @@ pub enum Resource {
     CoreDump = libc::RLIMIT_CORE as u32,
 }
 
+
+#[derive(Debug, Clone)]
 pub struct Process {
     path: CString,
     args: Vec<CString>,
     envs: Vec<CString>,
+    limits: Vec<(i32, u64)>,
 }
 
 impl Process {
@@ -23,6 +26,7 @@ impl Process {
             path,
             args: vec![],
             envs: vec![],
+            limits: vec![],
         }
     }
 
@@ -40,22 +44,29 @@ impl Process {
         self
     }
 
-    pub fn limit(self, resource: Resource, value: u64) -> Self {
-        let resource_id = (resource as u32).try_into().unwrap();
-        let ret = unsafe {
-            libc::setrlimit(resource_id, &libc::rlimit {
-                rlim_cur: value,
-                rlim_max: value,
-            })
-        };
-        if ret != 0 {
-            panic!("set resource limit failed");
-        }
+    pub fn limit(mut self, resource: Resource, value: u64) -> Self {
+        self.limits.push((resource as i32, value));
         self
     }
 
-    pub fn run(self) -> i32 {
-        match nix::unistd::execve(&self.path, self.args.as_ref(), self.envs.as_ref()) {
+    fn setrlimit(&self) {
+        for (resource, value) in &self.limits {
+            let ret = unsafe {
+                libc::setrlimit((*resource).try_into().unwrap(), &libc::rlimit {
+                    rlim_cur: *value,
+                    rlim_max: *value,
+                })
+            };
+            if ret != 0 {
+                panic!("set resource limit failed");
+            }
+        }
+    }
+
+    pub fn run(&self) -> i32 {
+        self.setrlimit();
+
+        match nix::unistd::execv(&self.path, self.args.as_ref()) {
             Ok(_) => {
                 println!("execve ok");
                 0

@@ -35,8 +35,8 @@ impl FlagToken {
 
 fn get_compile_flags(language: &str) -> Option<(&str, Vec<&str>)> {
     let map: HashMap<&str, (&str, Vec<&str>)> = [
-        ("c", ("gcc", vec![FlagToken::INPUT.value(), "-O2", "-Wall", "-lm", "-o", FlagToken::OUTPUT.value()])),
-        ("cpp", ("g++", vec![FlagToken::INPUT.value(), "-O2", "-Wall", "-lm", "-o", FlagToken::OUTPUT.value()])),
+        ("c", ("/usr/bin/gcc", vec!["gcc", FlagToken::INPUT.value(), "-O2", "-Wall", "-lm", "-o", FlagToken::OUTPUT.value()])),
+        ("cpp", ("/usr/bin/g++", vec!["g++", FlagToken::INPUT.value(), "-O2", "-Wall", "-lm", "-o", FlagToken::OUTPUT.value()])),
     ].iter().cloned().collect();
 
     map.get(language).cloned()
@@ -46,7 +46,6 @@ fn get_run_flags(language: &str) -> Option<Vec<&str>> {
     let map: HashMap<&str, Vec<&str>> = [
         ("c", vec![FlagToken::BINARY.value()]),
         ("cpp", vec![FlagToken::BINARY.value()]),
-        ("java", vec!["java", FlagToken::BINARY.value()]),
     ].iter().cloned().collect();
 
     map.get(language).cloned()
