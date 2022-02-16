@@ -3,14 +3,14 @@ use nix::unistd::fork;
 use nix::unistd::ForkResult::{Child, Parent};
 
 use crate::exit_code::ExitCode;
-use crate::process::{Process, Resource};
+use crate::process::{Process, Resource, Directory};
 
 pub struct ResourceLimit {
     pub memory: u64,
     pub time: u64,
 }
 
-pub fn execute(binary: &str, args: Vec<&str>, envs: Option<Vec<&str>>, limits: Option<ResourceLimit>) -> i32 {
+pub fn execute(binary: &str, args: Vec<&str>, envs: Option<Vec<&str>>, limits: Option<ResourceLimit>, directory: Option<Directory>) -> i32 {
     let pid = unsafe { fork() };
 
     match pid {
@@ -29,6 +29,10 @@ pub fn execute(binary: &str, args: Vec<&str>, envs: Option<Vec<&str>>, limits: O
                     .limit(Resource::AddressSpace, limits.memory)
                     .limit(Resource::CPUTime, limits.time)
                     .limit(Resource::CoreDump, 0);
+            }
+
+            if directory.is_some() {
+                process = process.dir(directory.unwrap());
             }
 
             process.run()

@@ -1,6 +1,6 @@
-use std::{convert::TryInto, ffi::CString};
+use std::{convert::TryInto, ffi::CString, path::PathBuf};
 
-use nix::libc;
+use nix::{libc, unistd};
 
 #[repr(u32)]
 pub enum Resource {
@@ -9,13 +9,18 @@ pub enum Resource {
     CoreDump = libc::RLIMIT_CORE as u32,
 }
 
+#[derive(Clone)]
+pub struct Directory {
+    pub working_dir: Option<PathBuf>,
+    pub root_dir: Option<PathBuf>,
+}
 
-#[derive(Debug, Clone)]
 pub struct Process {
     path: CString,
     args: Vec<CString>,
     envs: Vec<CString>,
     limits: Vec<(i32, u64)>,
+    dir: Option<Directory>,
 }
 
 impl Process {
@@ -27,6 +32,7 @@ impl Process {
             args: vec![],
             envs: vec![],
             limits: vec![],
+            dir: None,
         }
     }
 
@@ -63,8 +69,29 @@ impl Process {
         }
     }
 
+    pub fn dir(mut self, directory: Directory) -> Self {
+        self.dir = Some(directory);
+        self
+    }
+
+    fn chroot(&self) {
+        if self.dir.is_none() {
+            return;
+        }
+        
+        let directory = self.dir.as_ref().unwrap();
+        
+        if directory.working_dir.is_some() {
+            unistd::chdir(directory.working_dir.as_ref().unwrap().as_path()).unwrap();
+        }
+        if directory.root_dir.is_some() {
+            unistd::chroot(directory.root_dir.as_ref().unwrap().as_path()).unwrap();
+        }
+    }
+
     pub fn run(&self) -> i32 {
         self.setrlimit();
+        self.chroot();
 
         match nix::unistd::execv(&self.path, self.args.as_ref()) {
             Ok(_) => {

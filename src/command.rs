@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::vec::Vec;
 
-use crate::executor::{execute, ResourceLimit};
+use crate::{executor::{execute, ResourceLimit}, process::Directory};
 
 pub struct CompileOption {
     pub language: String,
@@ -15,6 +15,7 @@ pub struct RunOption<'a> {
     pub time_limit: u64,
     pub memory_limit: u64,
     pub envs: Vec<&'a str>,
+    pub directory: Directory,
 }
 
 enum FlagToken {
@@ -74,9 +75,7 @@ pub fn compile(opt: CompileOption) -> i32 {
         *arg
     }).collect();
 
-    println!("{:?}", compile_args);
-
-    execute(compiler, compile_args, None, None)
+    execute(compiler, compile_args, None, None, None)
 }
 
 pub fn run(opt: RunOption) -> i32 {
@@ -100,5 +99,5 @@ pub fn run(opt: RunOption) -> i32 {
         memory: opt.memory_limit,
     };
 
-    execute(&opt.file_path, args, Some(opt.envs.clone()), Some(rlimit))
+    execute(&opt.file_path, args, Some(opt.envs.clone()), Some(rlimit), Some(opt.directory.clone()))
 }

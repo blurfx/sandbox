@@ -71,6 +71,18 @@ fn add_run_command<'a>(app: App<'a>) -> App<'a> {
             .multiple_occurrences(true)
             .required(false)
         )
+        .arg(Arg::new("workdir")
+            .long("workdir")
+            .help("working directory")
+            .takes_value(true)
+            .required(false)
+        )
+        .arg(Arg::new("rootdir")
+            .long("rootdir")
+            .help("root directory")
+            .takes_value(true)
+            .required(false)
+        )
     )
 }
 

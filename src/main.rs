@@ -8,7 +8,10 @@ mod executor;
 mod exit_code;
 mod process;
 
+use std::path::PathBuf;
+
 use command::{compile, CompileOption, run, RunOption};
+use process::Directory;
 
 fn main() {
     let matches = cli::init().get_matches();
@@ -36,6 +39,18 @@ fn main() {
             let file_path = sub_matches.value_of("file").unwrap().to_string();
             let time_limit: u64 = sub_matches.value_of("time_limit").unwrap().parse().unwrap();
             let memory_limit: u64 = sub_matches.value_of("memory_limit").unwrap().parse().unwrap();
+            let working_dir = match sub_matches.value_of("workdir") {
+                Some(path) => Some(PathBuf::from(path)),
+                _ => None,
+            };
+            let root_dir = match sub_matches.value_of("rootdir") {
+                Some(path) => Some(PathBuf::from(path)),
+                _ => None,
+            };
+            let directory = Directory {
+                working_dir,
+                root_dir,
+            };
             let envs: Vec<_> = sub_matches.values_of("env").unwrap_or_default().collect();
 
             let option = RunOption {
@@ -44,6 +59,7 @@ fn main() {
                 time_limit,
                 memory_limit,
                 envs,
+                directory,
             };
             
             let succeed = run(option);
