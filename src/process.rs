@@ -47,7 +47,7 @@ impl Process {
         self
     }
 
-    pub fn envs(mut self, envs: Vec<&str>) -> Self {
+    pub fn envs(mut self, envs: Vec<String>) -> Self {
         self.envs = envs.iter()
                 .map(|env| CString::new(format!("{}", env)).unwrap())
                 .collect::<Vec<CString>>();
@@ -110,7 +110,7 @@ impl Process {
             let name = CString::new(name.clone()).unwrap();
             let syscall_id = unsafe { seccomp_sys::seccomp_syscall_resolve_name(name.as_ptr()) };
             if syscall_id < 0 {
-                panic!("seccomp_syscall_resolve_name failed");
+                panic!("invalid system call id of {:?}: {}", name, syscall_id);
             }
 
             if unsafe {
@@ -124,6 +124,8 @@ impl Process {
                 panic!("seccomp_rule_add failed");
             }
         });
+
+        filters.load();
     }
 
     pub fn run(&self) -> i32 {

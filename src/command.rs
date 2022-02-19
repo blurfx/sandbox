@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::vec::Vec;
 
-use crate::{executor::{execute, ResourceLimit}, process::Directory};
+use crate::{executor::{execute, ResourceLimit, ExecuteOption}, process::Directory};
 
 pub struct CompileOption {
     pub language: String,
@@ -9,12 +9,12 @@ pub struct CompileOption {
     pub output_path: String,
 }
 
-pub struct RunOption<'a> {
+pub struct RunOption {
     pub language: String,
     pub file_path: String,
     pub time_limit: u64,
     pub memory_limit: u64,
-    pub envs: Vec<&'a str>,
+    pub envs: Vec<String>,
     pub directory: Directory,
 }
 
@@ -75,7 +75,12 @@ pub fn compile(opt: CompileOption) -> i32 {
         *arg
     }).collect();
 
-    execute(compiler, compile_args, None, None, None, false)
+    execute(compiler, compile_args, ExecuteOption {
+        envs: None,
+        limits: None,
+        directory: None,
+        use_syscall: false,
+    })
 }
 
 pub fn run(opt: RunOption) -> i32 {
@@ -99,5 +104,12 @@ pub fn run(opt: RunOption) -> i32 {
         memory: opt.memory_limit,
     };
 
-    execute(&opt.file_path, args, Some(opt.envs.clone()), Some(rlimit), Some(opt.directory.clone()), true)
+    let option = ExecuteOption {
+        envs: Some(opt.envs.clone()),
+        limits: Some(rlimit),
+        directory: Some(opt.directory.clone()),
+        use_syscall: true,
+    };
+
+    execute(&opt.file_path, args, option)
 }

@@ -53,6 +53,7 @@ fn main() {
                 root_dir,
             };
             let envs: Vec<_> = sub_matches.values_of("env").unwrap_or_default().collect();
+            let envs = envs.iter().map(|s| s.to_string()).collect();
 
             let option = RunOption {
                 language,

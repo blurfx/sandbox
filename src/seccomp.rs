@@ -34,6 +34,14 @@ impl Default for SyscallFilter {
     }
 }
 
+impl Drop for SyscallFilter {
+    fn drop(&mut self) {
+        unsafe {
+            seccomp_sys::seccomp_release(self.context);
+        }
+    }
+}
+
 impl SyscallFilter {
     pub fn new() -> Self {
         let mut filter = SyscallFilter::default();
@@ -46,8 +54,6 @@ impl SyscallFilter {
 
         filter.add("fork", SyscallFilterAction::Kill);
         filter.add("vfork", SyscallFilterAction::Kill);
-        filter.add("clone", SyscallFilterAction::Kill);
-
         filter.add("clone", SyscallFilterAction::Kill);
 
         filter.add("chroot", SyscallFilterAction::Kill);
@@ -64,5 +70,11 @@ impl SyscallFilter {
     pub fn add(&mut self, syscall: &str, action: SyscallFilterAction) -> &mut Self {
         self.rules.push((syscall.to_string(), action));
         self
+    }
+
+    pub fn load(&self) {
+        unsafe {
+            seccomp_sys::seccomp_load(self.context);
+        }
     }
 }

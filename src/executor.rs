@@ -19,8 +19,14 @@ pub struct ResourceLimit {
     pub time: u64,
 }
 
+pub struct ExecuteOption {
+    pub envs: Option<Vec<String>>,
+    pub limits: Option<ResourceLimit>,
+    pub directory: Option<Directory>,
+    pub use_syscall: bool,
+}
 
-pub fn execute(binary: &str, args: Vec<&str>, envs: Option<Vec<&str>>, limits: Option<ResourceLimit>, directory: Option<Directory>, use_syscall: bool) -> i32 {
+pub fn execute(binary: &str, args: Vec<&str>, option: ExecuteOption) -> i32 {
     let pid = unsafe { fork() };
 
     match pid {
@@ -28,12 +34,12 @@ pub fn execute(binary: &str, args: Vec<&str>, envs: Option<Vec<&str>>, limits: O
             let mut process = Process::new(binary.to_string())
             .args(args);
 
-            if envs.is_some() {
-                process = process.envs(envs.unwrap());
+            if option.envs.is_some() {
+                process = process.envs(option.envs.unwrap());
             }
 
-            if limits.is_some() {
-                let limits = limits.unwrap();
+            if option.limits.is_some() {
+                let limits = option.limits.unwrap();
 
                 process = process
                     .limit(Resource::AddressSpace, limits.memory)
@@ -41,11 +47,11 @@ pub fn execute(binary: &str, args: Vec<&str>, envs: Option<Vec<&str>>, limits: O
                     .limit(Resource::CoreDump, 0);
             }
 
-            if directory.is_some() {
-                process = process.dir(directory.unwrap());
+            if option.directory.is_some() {
+                process = process.dir(option.directory.unwrap());
             }
 
-            process = process.use_syscall_filter(use_syscall);
+            process = process.use_syscall_filter(option.use_syscall);
 
             process.run()
         }
