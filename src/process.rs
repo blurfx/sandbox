@@ -2,6 +2,8 @@ use std::{convert::TryInto, ffi::CString, path::PathBuf};
 
 use nix::{libc, unistd};
 
+use crate::seccomp::SyscallFilter;
+
 #[repr(u32)]
 pub enum Resource {
     AddressSpace = libc::RLIMIT_AS as u32,
@@ -21,6 +23,7 @@ pub struct Process {
     envs: Vec<CString>,
     limits: Vec<(i32, u64)>,
     dir: Option<Directory>,
+    syscall_filters: Option<SyscallFilter>,
 }
 
 impl Process {
@@ -33,11 +36,12 @@ impl Process {
             envs: vec![],
             limits: vec![],
             dir: None,
+            syscall_filters: None,
         }
     }
 
     pub fn args(mut self, args: Vec<&str>) -> Self {
-         self.args = args.iter()
+        self.args = args.iter()
                 .map(|arg| CString::new(arg.clone()).unwrap())
                 .collect::<Vec<CString>>();
         self
@@ -89,9 +93,45 @@ impl Process {
         }
     }
 
+    pub fn use_syscall_filter(mut self, enabled: bool) -> Self {
+        if enabled {
+            self.syscall_filters = Some(SyscallFilter::new());
+        } else {
+            self.syscall_filters = None;
+        }
+
+        self
+    }
+
+    fn apply_syscall_filter(&self) {
+        let filters = self.syscall_filters.as_ref().unwrap();
+
+        filters.rules.iter().for_each(|(name, action)| {
+            let name = CString::new(name.clone()).unwrap();
+            let syscall_id = unsafe { seccomp_sys::seccomp_syscall_resolve_name(name.as_ptr()) };
+            if syscall_id < 0 {
+                panic!("seccomp_syscall_resolve_name failed");
+            }
+
+            if unsafe {
+                seccomp_sys::seccomp_rule_add(
+                    filters.context,
+                    action.to_seccomp_action(),
+                    syscall_id,
+                    0,
+                )
+            } < 0 {
+                panic!("seccomp_rule_add failed");
+            }
+        });
+    }
+
     pub fn run(&self) -> i32 {
         self.setrlimit();
         self.chroot();
+        if self.syscall_filters.is_some() {
+            self.apply_syscall_filter();
+        }
 
         match nix::unistd::execv(&self.path, self.args.as_ref()) {
             Ok(_) => {

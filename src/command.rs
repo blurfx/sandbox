@@ -75,7 +75,7 @@ pub fn compile(opt: CompileOption) -> i32 {
         *arg
     }).collect();
 
-    execute(compiler, compile_args, None, None, None)
+    execute(compiler, compile_args, None, None, None, false)
 }
 
 pub fn run(opt: RunOption) -> i32 {
@@ -99,5 +99,5 @@ pub fn run(opt: RunOption) -> i32 {
         memory: opt.memory_limit,
     };
 
-    execute(&opt.file_path, args, Some(opt.envs.clone()), Some(rlimit), Some(opt.directory.clone()))
+    execute(&opt.file_path, args, Some(opt.envs.clone()), Some(rlimit), Some(opt.directory.clone()), true)
 }

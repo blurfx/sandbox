@@ -20,7 +20,7 @@ pub struct ResourceLimit {
 }
 
 
-pub fn execute(binary: &str, args: Vec<&str>, envs: Option<Vec<&str>>, limits: Option<ResourceLimit>, directory: Option<Directory>) -> i32 {
+pub fn execute(binary: &str, args: Vec<&str>, envs: Option<Vec<&str>>, limits: Option<ResourceLimit>, directory: Option<Directory>, use_syscall: bool) -> i32 {
     let pid = unsafe { fork() };
 
     match pid {
@@ -44,6 +44,8 @@ pub fn execute(binary: &str, args: Vec<&str>, envs: Option<Vec<&str>>, limits: O
             if directory.is_some() {
                 process = process.dir(directory.unwrap());
             }
+
+            process = process.use_syscall_filter(use_syscall);
 
             process.run()
         }

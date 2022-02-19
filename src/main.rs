@@ -7,6 +7,7 @@ mod command;
 mod executor;
 mod exit_code;
 mod process;
+pub mod seccomp;
 
 use std::path::PathBuf;
 
