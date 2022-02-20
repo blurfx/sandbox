@@ -52,12 +52,19 @@ impl SyscallFilter {
             seccomp_sys::seccomp_init(filter.default_action.to_seccomp_action())
         };
 
-        filter.add("fork", SyscallFilterAction::Kill);
-        filter.add("vfork", SyscallFilterAction::Kill);
-        filter.add("clone", SyscallFilterAction::Kill);
+        let denied_calls = vec![
+            "fork",
+            "vfork",
+            "clone",
+            "reboot",
+            "chroot",
+            "setrlimit",
+            "bpf",
+        ];
 
-        filter.add("chroot", SyscallFilterAction::Kill);
-        filter.add("setrlimit", SyscallFilterAction::Kill);
+        for syscall_name in denied_calls {
+            filter.add(syscall_name, SyscallFilterAction::Kill);
+        }
 
         filter
     }
