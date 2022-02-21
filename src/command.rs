@@ -12,6 +12,7 @@ pub struct CompileOption {
 pub struct RunOption {
     pub language: String,
     pub file_path: String,
+    pub input_path: Option<String>,
     pub time_limit: u64,
     pub memory_limit: u64,
     pub envs: Vec<String>,
@@ -78,13 +79,14 @@ pub fn compile(opt: CompileOption) -> i32 {
     execute(compiler, compile_args, ExecuteOption {
         envs: None,
         limits: None,
+        input_path: None,
         directory: None,
         use_syscall: false,
     })
 }
 
 pub fn run(opt: RunOption) -> i32 {
-    let args = match get_run_flags(&opt.language) {
+    let mut args = match get_run_flags(&opt.language) {
         Some(args) => args,
         None => {
             panic!("unsupported language: {}", opt.language);
@@ -94,11 +96,12 @@ pub fn run(opt: RunOption) -> i32 {
     let args: Vec<&str> = args.iter().map(|arg| {
         if *arg == FlagToken::BINARY.value() {
             return opt.file_path.as_str();
-        } 
+        }
 
         *arg
     }).collect();
 
+    println!("{:?}", args);
     let rlimit = ResourceLimit {
         time: opt.time_limit,
         memory: opt.memory_limit,
@@ -107,6 +110,7 @@ pub fn run(opt: RunOption) -> i32 {
     let option = ExecuteOption {
         envs: Some(opt.envs.clone()),
         limits: Some(rlimit),
+        input_path: opt.input_path.clone(),
         directory: Some(opt.directory.clone()),
         use_syscall: true,
     };

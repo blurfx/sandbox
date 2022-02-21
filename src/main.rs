@@ -38,6 +38,10 @@ fn main() {
         Some(("run", sub_matches)) => {
             let language = sub_matches.value_of("language").unwrap().to_string();
             let file_path = sub_matches.value_of("file").unwrap().to_string();
+            let input_path = match sub_matches.value_of("input") {
+                Some(input) => Some(input.to_string()),
+                None => None,
+            };
             let time_limit: u64 = sub_matches.value_of("time_limit").unwrap().parse().unwrap();
             let memory_limit: u64 = sub_matches.value_of("memory_limit").unwrap().parse().unwrap();
             let working_dir = match sub_matches.value_of("workdir") {
@@ -58,6 +62,7 @@ fn main() {
             let option = RunOption {
                 language,
                 file_path,
+                input_path,
                 time_limit,
                 memory_limit,
                 envs,

@@ -21,6 +21,7 @@ pub struct Process {
     path: CString,
     args: Vec<CString>,
     envs: Vec<CString>,
+    stdin_fd: i32,
     limits: Vec<(i32, u64)>,
     dir: Option<Directory>,
     syscall_filters: Option<SyscallFilter>,
@@ -34,6 +35,7 @@ impl Process {
             path,
             args: vec![],
             envs: vec![],
+            stdin_fd: 0,
             limits: vec![],
             dir: None,
             syscall_filters: None,
@@ -128,11 +130,21 @@ impl Process {
         filters.load();
     }
 
+    pub fn stdin(mut self, file_path: String) -> Self {
+        let path = Some(CString::new(file_path).unwrap());
+        self.stdin_fd = unsafe { libc::open(path.as_ref().unwrap().as_ptr(), libc::O_RDONLY, 0) };
+        self
+    }
+
     pub fn run(&self) -> i32 {
         self.setrlimit();
         self.chroot();
         if self.syscall_filters.is_some() {
             self.apply_syscall_filter();
+        }
+
+        if self.stdin_fd != 0 {
+            unsafe { libc::dup2(self.stdin_fd, 0) };
         }
 
         match nix::unistd::execv(&self.path, self.args.as_ref()) {

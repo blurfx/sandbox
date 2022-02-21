@@ -50,7 +50,7 @@ fn add_run_command<'a>(app: App<'a>) -> App<'a> {
             .long("input")
             .help("test case input file")
             .takes_value(true)
-            .required(true)
+            .required(false)
         )
         .arg(Arg::new("memory_limit")
             .long("memory")
