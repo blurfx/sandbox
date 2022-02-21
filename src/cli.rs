@@ -3,7 +3,7 @@ use clap::{App, Arg};
 
 fn add_build_command<'a>(app: App<'a>) -> App<'a> {
     app.subcommand(App::new("build")
-        .about("compile code within sandbox")
+        .about("compile code")
         .arg(Arg::new("language")
             .short('l')
             .long("language")
@@ -30,7 +30,7 @@ fn add_build_command<'a>(app: App<'a>) -> App<'a> {
 
 fn add_run_command<'a>(app: App<'a>) -> App<'a> {
     app.subcommand(App::new("run")
-        .about("compile code within sandbox")
+        .about("run binary or code within sandbox")
         .arg(Arg::new("language")
             .short('l')
             .long("language")
@@ -48,7 +48,7 @@ fn add_run_command<'a>(app: App<'a>) -> App<'a> {
         .arg(Arg::new("input")
             .short('i')
             .long("input")
-            .help("input file")
+            .help("test case input file")
             .takes_value(true)
             .required(true)
         )
