@@ -42,6 +42,10 @@ fn main() {
                 Some(input) => Some(input.to_string()),
                 None => None,
             };
+            let output_path = match sub_matches.value_of("output") {
+                Some(output) => Some(output.to_string()),
+                None => None,
+            };
             let time_limit: u64 = sub_matches.value_of("time_limit").unwrap().parse().unwrap();
             let memory_limit: u64 = sub_matches.value_of("memory_limit").unwrap().parse().unwrap();
             let working_dir = match sub_matches.value_of("workdir") {
@@ -63,6 +67,7 @@ fn main() {
                 language,
                 file_path,
                 input_path,
+                output_path,
                 time_limit,
                 memory_limit,
                 envs,

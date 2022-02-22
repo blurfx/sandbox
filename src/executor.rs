@@ -23,6 +23,7 @@ pub struct ExecuteOption {
     pub envs: Option<Vec<String>>,
     pub limits: Option<ResourceLimit>,
     pub input_path: Option<String>,
+    pub output_path: Option<String>,
     pub directory: Option<Directory>,
     pub use_syscall: bool,
 }
@@ -53,6 +54,10 @@ pub fn execute(binary: &str, args: Vec<&str>, option: ExecuteOption) -> i32 {
 
             if option.input_path.is_some() {
                 process = process.stdin(option.input_path.unwrap());
+            }
+
+            if option.output_path.is_some() {
+                process = process.stdout(option.output_path.unwrap());
             }
 
             process = process.use_syscall_filter(option.use_syscall);

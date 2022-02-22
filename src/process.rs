@@ -22,9 +22,19 @@ pub struct Process {
     args: Vec<CString>,
     envs: Vec<CString>,
     stdin_fd: i32,
+    stdout_fd: i32,
     limits: Vec<(i32, u64)>,
     dir: Option<Directory>,
     syscall_filters: Option<SyscallFilter>,
+}
+
+impl Drop for Process {
+    fn drop(&mut self) {
+        unsafe {
+            libc::close(self.stdin_fd);
+            libc::close(self.stdout_fd);
+        }
+    }
 }
 
 impl Process {
@@ -36,6 +46,7 @@ impl Process {
             args: vec![],
             envs: vec![],
             stdin_fd: 0,
+            stdout_fd: 1,
             limits: vec![],
             dir: None,
             syscall_filters: None,
@@ -136,6 +147,15 @@ impl Process {
         self
     }
 
+    pub fn stdout(mut self, file_path: String) -> Self {
+        let path = Some(CString::new(file_path).unwrap());
+        self.stdout_fd = unsafe {
+            libc::creat(path.as_ref().unwrap().as_ptr(), libc::S_IRUSR | libc::S_IWUSR);
+            libc::open(path.as_ref().unwrap().as_ptr(), libc::O_WRONLY, 0)
+        };
+        self
+    }
+
     pub fn run(&self) -> i32 {
         self.setrlimit();
         self.chroot();
@@ -145,6 +165,10 @@ impl Process {
 
         if self.stdin_fd != 0 {
             unsafe { libc::dup2(self.stdin_fd, 0) };
+        }
+
+        if self.stdout_fd != 1 {
+            unsafe { libc::dup2(self.stdout_fd, 1) };
         }
 
         match nix::unistd::execv(&self.path, self.args.as_ref()) {
