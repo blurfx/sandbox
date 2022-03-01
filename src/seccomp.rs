@@ -48,9 +48,8 @@ impl SyscallFilter {
 
         filter.default_action(SyscallFilterAction::Allow);
 
-        filter.context = unsafe {
-            seccomp_sys::seccomp_init(filter.default_action.to_seccomp_action())
-        };
+        filter.context =
+            unsafe { seccomp_sys::seccomp_init(filter.default_action.to_seccomp_action()) };
 
         let denied_calls = vec![
             "_sysctl",

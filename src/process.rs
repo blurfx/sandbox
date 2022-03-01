@@ -54,16 +54,18 @@ impl Process {
     }
 
     pub fn args(mut self, args: Vec<&str>) -> Self {
-        self.args = args.iter()
-                .map(|arg| CString::new(arg.clone()).unwrap())
-                .collect::<Vec<CString>>();
+        self.args = args
+            .iter()
+            .map(|arg| CString::new(arg.clone()).unwrap())
+            .collect::<Vec<CString>>();
         self
     }
 
     pub fn envs(mut self, envs: Vec<String>) -> Self {
-        self.envs = envs.iter()
-                .map(|env| CString::new(format!("{}", env)).unwrap())
-                .collect::<Vec<CString>>();
+        self.envs = envs
+            .iter()
+            .map(|env| CString::new(format!("{}", env)).unwrap())
+            .collect::<Vec<CString>>();
         self
     }
 
@@ -75,10 +77,13 @@ impl Process {
     fn setrlimit(&self) {
         for (resource, value) in &self.limits {
             let ret = unsafe {
-                libc::setrlimit((*resource).try_into().unwrap(), &libc::rlimit {
-                    rlim_cur: *value,
-                    rlim_max: *value,
-                })
+                libc::setrlimit(
+                    (*resource).try_into().unwrap(),
+                    &libc::rlimit {
+                        rlim_cur: *value,
+                        rlim_max: *value,
+                    },
+                )
             };
             if ret != 0 {
                 panic!("set resource limit failed");
@@ -95,9 +100,9 @@ impl Process {
         if self.dir.is_none() {
             return;
         }
-        
+
         let directory = self.dir.as_ref().unwrap();
-        
+
         if directory.working_dir.is_some() {
             unistd::chdir(directory.working_dir.as_ref().unwrap().as_path()).unwrap();
         }
@@ -133,7 +138,8 @@ impl Process {
                     syscall_id,
                     0,
                 )
-            } < 0 {
+            } < 0
+            {
                 panic!("seccomp_rule_add failed");
             }
         });
@@ -150,7 +156,10 @@ impl Process {
     pub fn stdout(mut self, file_path: String) -> Self {
         let path = Some(CString::new(file_path).unwrap());
         self.stdout_fd = unsafe {
-            libc::creat(path.as_ref().unwrap().as_ptr(), libc::S_IRUSR | libc::S_IWUSR);
+            libc::creat(
+                path.as_ref().unwrap().as_ptr(),
+                libc::S_IRUSR | libc::S_IWUSR,
+            );
             libc::open(path.as_ref().unwrap().as_ptr(), libc::O_WRONLY, 0)
         };
         self
