@@ -1,17 +1,18 @@
 extern crate clap;
-extern crate nix;
 extern crate core;
+extern crate nix;
 
 mod cli;
 mod command;
 mod executor;
 mod exit_code;
+mod judge;
 mod process;
 pub mod seccomp;
 
 use std::path::PathBuf;
 
-use command::{compile, CompileOption, run, RunOption};
+use command::{compile, run, CompileOption, RunOption};
 use process::Directory;
 
 fn main() {
@@ -29,7 +30,7 @@ fn main() {
             };
 
             let succeed = compile(option);
-            if succeed == 0{
+            if succeed == 0 {
                 println!("ok");
             } else {
                 println!("no");
@@ -46,8 +47,16 @@ fn main() {
                 Some(output) => Some(output.to_string()),
                 None => None,
             };
+            let answer_path = match sub_matches.value_of("answer") {
+                Some(answer) => Some(answer.to_string()),
+                None => None,
+            };
             let time_limit: u64 = sub_matches.value_of("time_limit").unwrap().parse().unwrap();
-            let memory_limit: u64 = sub_matches.value_of("memory_limit").unwrap().parse().unwrap();
+            let memory_limit: u64 = sub_matches
+                .value_of("memory_limit")
+                .unwrap()
+                .parse()
+                .unwrap();
             let working_dir = match sub_matches.value_of("workdir") {
                 Some(path) => Some(PathBuf::from(path)),
                 _ => None,
@@ -68,12 +77,13 @@ fn main() {
                 file_path,
                 input_path,
                 output_path,
+                answer_path,
                 time_limit,
                 memory_limit,
                 envs,
                 directory,
             };
-            
+
             let succeed = run(option);
             if succeed == 0 {
                 println!("run ok");
