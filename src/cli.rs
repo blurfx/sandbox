@@ -1,8 +1,8 @@
-use clap::{App, Arg};
+use clap::{Arg, Command};
 
-fn add_build_command<'a>(app: App<'a>) -> App<'a> {
+fn add_build_command<'a>(app: Command<'a>) -> Command<'a> {
     app.subcommand(
-        App::new("build")
+        Command::new("build")
             .about("compile code")
             .arg(
                 Arg::new("language")
@@ -31,9 +31,9 @@ fn add_build_command<'a>(app: App<'a>) -> App<'a> {
     )
 }
 
-fn add_run_command<'a>(app: App<'a>) -> App<'a> {
+fn add_run_command<'a>(app: Command<'a>) -> Command<'a> {
     app.subcommand(
-        App::new("run")
+        Command::new("run")
             .about("run binary or code within sandbox")
             .arg(
                 Arg::new("language")
@@ -114,8 +114,8 @@ fn add_run_command<'a>(app: App<'a>) -> App<'a> {
     )
 }
 
-pub fn init<'a>() -> App<'a> {
-    let app = App::new("Sandbox").version("0.0.1");
+pub fn init<'a>() -> Command<'a> {
+    let app = Command::new("Sandbox").version("0.0.1");
     let app = add_build_command(app);
     add_run_command(app)
 }
