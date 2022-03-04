@@ -10,6 +10,7 @@ pub struct CompileOption {
     pub language: String,
     pub input_path: String,
     pub output_path: String,
+    pub time_limit: u64,
 }
 
 pub struct RunOption {
@@ -123,7 +124,10 @@ pub fn compile(opt: CompileOption) -> i32 {
         compile_args,
         ExecuteOption {
             envs: None,
-            limits: None,
+            limits: Some(ResourceLimit {
+                time: opt.time_limit,
+                memory: 268435456, // 256mb
+            }),
             input_path: None,
             output_path: None,
             answer_path: None,

@@ -23,10 +23,16 @@ fn main() {
             let language = sub_matches.value_of("language").unwrap().to_string();
             let input_path = sub_matches.value_of("input").unwrap().to_string();
             let output_path = sub_matches.value_of("output").unwrap().to_string();
+            let time_limit: u64 = sub_matches
+                .value_of("time_limit")
+                .unwrap_or("15")
+                .parse()
+                .unwrap();
             let option = CompileOption {
                 language,
                 input_path,
                 output_path,
+                time_limit,
             };
 
             let succeed = compile(option);

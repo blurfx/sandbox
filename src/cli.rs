@@ -27,6 +27,13 @@ fn add_build_command<'a>(app: Command<'a>) -> Command<'a> {
                     .help("output file")
                     .takes_value(true)
                     .required(true),
+            )
+            .arg(
+                Arg::new("time_limit")
+                    .long("time")
+                    .help("compile time limit in second")
+                    .takes_value(true)
+                    .required(false),
             ),
     )
 }
