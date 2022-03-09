@@ -5,7 +5,7 @@ use nix::unistd::fork;
 use nix::unistd::ForkResult::{Child, Parent};
 
 use crate::exit_code::ExitCode;
-use crate::judge::{judge, JudgeOption};
+use crate::judge::{self, judge, JudgeOption, JudgeResult};
 use crate::process::{Directory, Process, Resource};
 
 #[derive(Debug)]
@@ -105,17 +105,16 @@ pub fn execute(binary: &str, args: Vec<&str>, option: ExecuteOption) -> i32 {
                 }
             }
 
-            if status == 0 {
-                let limits = option.limits.unwrap();
-                let judge_opt = JudgeOption {
-                    output_path: option.output_path,
-                    answer_path: option.answer_path,
-                    time_limit: limits.time,
-                    memory_limit: limits.memory,
-                };
-                let result = judge(resource_usage.unwrap(), judge_opt);
-                println!("{:?}", result);
-            }
+            let limits = option.limits.unwrap();
+            let judge_opt = JudgeOption {
+                output_path: option.output_path,
+                answer_path: option.answer_path,
+                time_limit: limits.time,
+                memory_limit: limits.memory,
+            };
+            let result = judge(status, resource_usage.unwrap(), judge_opt);
+
+            println!("{:?}", result);
 
             status
         }

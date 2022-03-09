@@ -24,7 +24,7 @@ pub enum Result {
 
 #[derive(Debug, Clone)]
 pub struct JudgeResult {
-    result: Result,
+    pub result: Result,
 }
 
 fn trim_last_newline(mut vec: Vec<String>) -> Vec<String> {
@@ -34,16 +34,25 @@ fn trim_last_newline(mut vec: Vec<String>) -> Vec<String> {
     vec
 }
 
-pub fn judge(rusage: ResourceUsage, option: JudgeOption) -> JudgeResult {
+pub fn judge(exit_code: i32, rusage: ResourceUsage, option: JudgeOption) -> JudgeResult {
     if rusage.user_time.as_millis() as u64 > (option.time_limit * 1000) {
         return JudgeResult {
             result: Result::TimeLimitExceeded,
         };
-    } else if rusage.memory > (option.memory_limit / 1024) {
+    }
+
+    if rusage.memory > (option.memory_limit / 1024) {
         return JudgeResult {
             result: Result::MemoryLimitExceeded,
         };
     }
+
+    if exit_code != 0 {
+        return JudgeResult {
+            result: Result::RuntimeError,
+        };
+    }
+
     let output_path = option.output_path.unwrap();
     let answer_path = option.answer_path.unwrap();
     if diff(&output_path, &answer_path) {
