@@ -13,18 +13,17 @@ pub struct JudgeOption {
 }
 
 #[derive(Debug, Clone)]
-pub enum Result {
+pub enum ResultKind {
     Accepted,
     WrongAnswer,
     TimeLimitExceeded,
     MemoryLimitExceeded,
-    OutputLimitExceeded,
     RuntimeError,
 }
 
 #[derive(Debug, Clone)]
 pub struct JudgeResult {
-    pub result: Result,
+    pub result: ResultKind,
 }
 
 fn trim_last_newline(mut vec: Vec<String>) -> Vec<String> {
@@ -34,65 +33,65 @@ fn trim_last_newline(mut vec: Vec<String>) -> Vec<String> {
     vec
 }
 
+fn to_bytes(vec: Vec<String>) -> Vec<u8> {
+    vec.into_iter().map(|s| s.into_bytes()).flatten().collect()
+}
+
 pub fn judge(exit_code: i32, rusage: ResourceUsage, option: JudgeOption) -> JudgeResult {
     if rusage.user_time.as_millis() as u64 > (option.time_limit * 1000) {
         return JudgeResult {
-            result: Result::TimeLimitExceeded,
+            result: ResultKind::TimeLimitExceeded,
         };
     }
 
     if rusage.memory > (option.memory_limit / 1024) {
         return JudgeResult {
-            result: Result::MemoryLimitExceeded,
+            result: ResultKind::MemoryLimitExceeded,
         };
     }
 
     if exit_code != 0 {
         return JudgeResult {
-            result: Result::RuntimeError,
+            result: ResultKind::RuntimeError,
         };
     }
 
     let output_path = option.output_path.unwrap();
     let answer_path = option.answer_path.unwrap();
-    if diff(&output_path, &answer_path) {
-        JudgeResult {
-            result: Result::Accepted,
-        }
-    } else {
-        JudgeResult {
-            result: Result::WrongAnswer,
-        }
-    }
+    let result = diff(&output_path, &answer_path);
+
+    JudgeResult { result }
 }
 
-pub fn diff(output_path: &str, answer_path: &str) -> bool {
+pub fn diff(output_path: &str, answer_path: &str) -> ResultKind {
     let output_file = File::open(output_path).unwrap();
     let answer_file = File::open(answer_path).unwrap();
 
-    let mut output_reader = BufReader::new(output_file);
-    let mut answer_reader = BufReader::new(answer_file);
+    let output_reader = BufReader::new(output_file);
+    let answer_reader = BufReader::new(answer_file);
 
-    let mut output_lines: Vec<String> = output_reader
+    let output_lines: Vec<String> = output_reader
         .lines()
         .map(|l| l.expect("failed to parse line"))
         .collect();
-    let mut answer_lines: Vec<String> = answer_reader
+    let answer_lines: Vec<String> = answer_reader
         .lines()
         .map(|l| l.expect("failed to parse line"))
         .collect();
 
-    output_lines = trim_last_newline(output_lines);
-    answer_lines = trim_last_newline(answer_lines);
+    let output_lines = to_bytes(trim_last_newline(output_lines));
+    let answer_lines = to_bytes(trim_last_newline(answer_lines));
 
     if output_lines.len() != answer_lines.len() {
-        return false;
+        return ResultKind::WrongAnswer;
     }
 
-    for (output_line, answer_line) in output_lines.iter().zip(answer_lines.iter()) {
-        if output_line != answer_line {
-            return false;
+    let mut i = 0;
+    while i < output_lines.len() {
+        if output_lines[i] != answer_lines[i] {
+            return ResultKind::WrongAnswer;
         }
+        i += 1;
     }
-    return true;
+    return ResultKind::Accepted;
 }
