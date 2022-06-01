@@ -5,7 +5,7 @@ use nix::unistd::fork;
 use nix::unistd::ForkResult::{Child, Parent};
 
 use crate::exit_code::ExitCode;
-use crate::judge::{self, judge, JudgeOption, JudgeResult};
+use crate::judge::{judge, JudgeOption};
 use crate::process::{Directory, Process, Resource};
 
 #[derive(Debug)]
