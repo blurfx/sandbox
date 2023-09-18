@@ -1,6 +1,6 @@
 use clap::{Arg, Command};
 
-fn add_build_command<'a>(app: Command<'a>) -> Command<'a> {
+fn add_build_command(app: Command) -> Command {
     app.subcommand(
         Command::new("build")
             .about("compile code")
@@ -38,7 +38,7 @@ fn add_build_command<'a>(app: Command<'a>) -> Command<'a> {
     )
 }
 
-fn add_run_command<'a>(app: Command<'a>) -> Command<'a> {
+fn add_run_command(app: Command) -> Command {
     app.subcommand(
         Command::new("run")
             .about("run binary or code within sandbox")
