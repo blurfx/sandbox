@@ -97,6 +97,7 @@ impl SyscallFilter {
             "setns",
             "setrlimit",
             "settimeofday",
+            "shutdown",
             "swapoff",
             "swapon",
             "sysfs",
