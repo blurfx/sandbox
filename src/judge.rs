@@ -56,6 +56,10 @@ pub fn judge(exit_code: i32, rusage: ResourceUsage, option: JudgeOption) -> Judg
         };
     }
 
+    if option.output_path.is_none() {
+        return JudgeResult { result: ResultKind::Accepted }
+    }
+
     let output_path = option.output_path.unwrap();
     let answer_path = option.answer_path.unwrap();
     let result = diff(&output_path, &answer_path);
