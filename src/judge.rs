@@ -16,6 +16,7 @@ pub enum ResultKind {
     TimeLimitExceeded,
     MemoryLimitExceeded,
     RuntimeError,
+    ServerError,
 }
 
 #[derive(Debug, Clone)]
@@ -28,10 +29,6 @@ fn trim_last_newline(mut vec: Vec<String>) -> Vec<String> {
         vec.pop();
     }
     vec
-}
-
-fn to_bytes(vec: Vec<String>) -> Vec<u8> {
-    vec.into_iter().map(|s| s.into_bytes()).flatten().collect()
 }
 
 pub fn judge(exit_code: i32, rusage: ResourceUsage, option: JudgeOption) -> JudgeResult {
@@ -87,6 +84,6 @@ pub fn diff(output_path: &str, answer_path: &str) -> ResultKind {
             }
             ResultKind::Accepted
         }
-        _ => ResultKind::WrongAnswer,
+        _ => ResultKind::ServerError,
     }
 }
