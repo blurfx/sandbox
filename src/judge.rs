@@ -1,7 +1,4 @@
-use std::{
-    fs::File,
-    io::{BufRead, BufReader},
-};
+use std::fs::read_to_string;
 
 use crate::executor::ResourceUsage;
 
@@ -57,7 +54,9 @@ pub fn judge(exit_code: i32, rusage: ResourceUsage, option: JudgeOption) -> Judg
     }
 
     if option.output_path.is_none() {
-        return JudgeResult { result: ResultKind::Accepted }
+        return JudgeResult {
+            result: ResultKind::Accepted,
+        };
     }
 
     let output_path = option.output_path.unwrap();
@@ -68,34 +67,26 @@ pub fn judge(exit_code: i32, rusage: ResourceUsage, option: JudgeOption) -> Judg
 }
 
 pub fn diff(output_path: &str, answer_path: &str) -> ResultKind {
-    let output_file = File::open(output_path).unwrap();
-    let answer_file = File::open(answer_path).unwrap();
+    let output = read_to_string(output_path);
+    let answer = read_to_string(answer_path);
+    match (output, answer) {
+        (Ok(output), Ok(answer)) => {
+            let output_lines: Vec<String> =
+                trim_last_newline(output.lines().map(|l| l.to_string()).collect());
+            let answer_lines: Vec<String> =
+                trim_last_newline(answer.lines().map(|l| l.to_string()).collect());
 
-    let output_reader = BufReader::new(output_file);
-    let answer_reader = BufReader::new(answer_file);
+            if output_lines.len() != answer_lines.len() {
+                return ResultKind::WrongAnswer;
+            }
 
-    let output_lines: Vec<String> = output_reader
-        .lines()
-        .map(|l| l.expect("failed to parse line"))
-        .collect();
-    let answer_lines: Vec<String> = answer_reader
-        .lines()
-        .map(|l| l.expect("failed to parse line"))
-        .collect();
-
-    let output_lines = to_bytes(trim_last_newline(output_lines));
-    let answer_lines = to_bytes(trim_last_newline(answer_lines));
-
-    if output_lines.len() != answer_lines.len() {
-        return ResultKind::WrongAnswer;
-    }
-
-    let mut i = 0;
-    while i < output_lines.len() {
-        if output_lines[i] != answer_lines[i] {
-            return ResultKind::WrongAnswer;
+            for i in 0..output_lines.len() {
+                if output_lines[i] != answer_lines[i] {
+                    return ResultKind::WrongAnswer;
+                }
+            }
+            ResultKind::Accepted
         }
-        i += 1;
+        _ => ResultKind::WrongAnswer,
     }
-    return ResultKind::Accepted;
 }
