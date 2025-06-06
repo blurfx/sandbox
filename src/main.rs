@@ -20,12 +20,12 @@ fn main() {
 
     match matches.subcommand() {
         Some(("build", sub_matches)) => {
-            let language = sub_matches.value_of("language").unwrap().to_string();
-            let input_path = sub_matches.value_of("input").unwrap().to_string();
-            let output_path = sub_matches.value_of("output").unwrap().to_string();
+            let language = sub_matches.get_one::<String>("language").unwrap().to_string();
+            let input_path = sub_matches.get_one::<String>("input").unwrap().to_string();
+            let output_path = sub_matches.get_one::<String>("output").unwrap().to_string();
             let time_limit: u64 = sub_matches
-                .value_of("time_limit")
-                .unwrap_or("15")
+                .get_one::<String>("time_limit")
+                .unwrap()
                 .parse()
                 .unwrap();
             let option = CompileOption {
@@ -43,31 +43,31 @@ fn main() {
             }
         }
         Some(("run", sub_matches)) => {
-            let language = sub_matches.value_of("language").unwrap().to_string();
-            let file_path = sub_matches.value_of("file").unwrap().to_string();
-            let input_path = match sub_matches.value_of("input") {
+            let language = sub_matches.get_one::<String>("language").unwrap().to_string();
+            let file_path = sub_matches.get_one::<String>("file").unwrap().to_string();
+            let input_path = match sub_matches.get_one::<String>("input") {
                 Some(input) => Some(input.to_string()),
                 None => None,
             };
-            let output_path = match sub_matches.value_of("output") {
+            let output_path = match sub_matches.get_one::<String>("output") {
                 Some(output) => Some(output.to_string()),
                 None => None,
             };
-            let answer_path = match sub_matches.value_of("answer") {
+            let answer_path = match sub_matches.get_one::<String>("answer") {
                 Some(answer) => Some(answer.to_string()),
                 None => None,
             };
-            let time_limit: u64 = sub_matches.value_of("time_limit").unwrap().parse().unwrap();
+            let time_limit: u64 = sub_matches.get_one::<String>("time_limit").unwrap().parse().unwrap();
             let memory_limit: u64 = sub_matches
-                .value_of("memory_limit")
+                .get_one::<String>("memory_limit")
                 .unwrap()
                 .parse()
                 .unwrap();
-            let working_dir = match sub_matches.value_of("workdir") {
+            let working_dir = match sub_matches.get_one::<String>("workdir") {
                 Some(path) => Some(PathBuf::from(path)),
                 _ => None,
             };
-            let root_dir = match sub_matches.value_of("rootdir") {
+            let root_dir = match sub_matches.get_one::<String>("rootdir") {
                 Some(path) => Some(PathBuf::from(path)),
                 _ => None,
             };
@@ -75,7 +75,7 @@ fn main() {
                 working_dir,
                 root_dir,
             };
-            let envs: Vec<_> = sub_matches.values_of("env").unwrap_or_default().collect();
+            let envs: Vec<_> = sub_matches.get_many::<String>("env").unwrap_or_default().collect();
             let envs = envs.iter().map(|s| s.to_string()).collect();
 
             let option = RunOption {
