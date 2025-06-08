@@ -12,15 +12,40 @@ pub mod seccomp;
 
 use std::path::PathBuf;
 
-use command::{compile, run, CompileOption, RunOption};
+use command::{CompileOption, RunOption, compile, run};
 use process::Directory;
+
+use crate::judge::{JudgeOption, JudgeResultType, judge};
+use serde::Serialize;
+
+#[derive(Serialize, Debug)]
+#[serde(tag = "type")]
+enum CommandResult {
+    #[serde(rename = "compile")]
+    Compile {
+        exit_code: i32,
+        memory: u64,
+        runtime: u64,
+    },
+
+    #[serde(rename = "run")]
+    Run {
+        exit_code: i32,
+        memory: u64,
+        runtime: u64,
+        result: JudgeResultType,
+    },
+}
 
 fn main() {
     let matches = cli::init().get_matches();
 
     match matches.subcommand() {
         Some(("build", sub_matches)) => {
-            let language = sub_matches.get_one::<String>("language").unwrap().to_string();
+            let language = sub_matches
+                .get_one::<String>("language")
+                .unwrap()
+                .to_string();
             let input_path = sub_matches.get_one::<String>("input").unwrap().to_string();
             let output_path = sub_matches.get_one::<String>("output").unwrap().to_string();
             let time_limit: u64 = sub_matches
@@ -35,15 +60,23 @@ fn main() {
                 time_limit,
             };
 
-            let succeed = compile(option);
-            if succeed == 0 {
-                println!("ok");
-            } else {
-                println!("no");
-            }
+            let result = compile(option);
+            print!(
+                "{}",
+                serde_json::to_string(&CommandResult::Compile {
+                    exit_code: result.exit_code,
+                    memory: result.rusage.memory,
+                    runtime: (result.rusage.cpu_time.as_millis()
+                        + result.rusage.user_time.as_millis()) as u64,
+                })
+                .unwrap()
+            );
         }
         Some(("run", sub_matches)) => {
-            let language = sub_matches.get_one::<String>("language").unwrap().to_string();
+            let language = sub_matches
+                .get_one::<String>("language")
+                .unwrap()
+                .to_string();
             let file_path = sub_matches.get_one::<String>("file").unwrap().to_string();
             let input_path = match sub_matches.get_one::<String>("input") {
                 Some(input) => Some(input.to_string()),
@@ -57,7 +90,11 @@ fn main() {
                 Some(answer) => Some(answer.to_string()),
                 None => None,
             };
-            let time_limit: u64 = sub_matches.get_one::<String>("time_limit").unwrap().parse().unwrap();
+            let time_limit: u64 = sub_matches
+                .get_one::<String>("time_limit")
+                .unwrap()
+                .parse()
+                .unwrap();
             let memory_limit: u64 = sub_matches
                 .get_one::<String>("memory_limit")
                 .unwrap()
@@ -75,27 +112,53 @@ fn main() {
                 working_dir,
                 root_dir,
             };
-            let envs: Vec<_> = sub_matches.get_many::<String>("env").unwrap_or_default().collect();
+            let envs: Vec<_> = sub_matches
+                .get_many::<String>("env")
+                .unwrap_or_default()
+                .collect();
             let envs = envs.iter().map(|s| s.to_string()).collect();
 
             let option = RunOption {
                 language,
                 file_path,
                 input_path,
-                output_path,
-                answer_path,
+                output_path: output_path.clone(),
                 time_limit,
                 memory_limit,
                 envs,
                 directory,
             };
 
-            let succeed = run(option);
-            if succeed == 0 {
-                println!("run ok");
-            } else {
-                println!("run fail");
-            }
+            let result = run(option);
+            let judge_opt = JudgeOption {
+                output_path: output_path,
+                answer_path: answer_path,
+                time_limit: time_limit,
+                memory_limit: memory_limit,
+            };
+            let judge_result = judge(result.exit_code, result.rusage, judge_opt);
+            print!(
+                "{}",
+                serde_json::to_string(&CommandResult::Run {
+                    exit_code: result.exit_code,
+                    memory: judge_result.memory,
+                    runtime: judge_result.runtime,
+                    result: judge_result.result,
+                })
+                .unwrap()
+            );
+            // } else {
+            //     print!(
+            //         "{}",
+            //         serde_json::to_string(&CommandResult::Run {
+            //             exit_code: result.exit_code,
+            //             memory: result.rusage.memory,
+            //             runtime: result.rusage.user_time.as_millis() as u64,
+            //             result: JudgeResultType::SystemError,
+            //         })
+            //         .unwrap()
+            //     );
+            // }
         }
         _ => {
             unreachable!("no valid subcommand given")

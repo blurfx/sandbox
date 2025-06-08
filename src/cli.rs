@@ -85,15 +85,15 @@ fn add_run_command(app: Command) -> Command {
             .arg(
                 Arg::new("memory_limit")
                     .long("memory")
-                    .help("memory limit in bytes")
-                    .value_name("BYTES")
+                    .help("memory limit in kilobytes")
+                    .value_name("KB")
                     .required(true),
             )
             .arg(
                 Arg::new("time_limit")
                     .long("time")
                     .help("runtime limit in second")
-                    .value_name("SECONDS")
+                    .value_name("MILLISECONDS")
                     .required(true),
             )
             .arg(

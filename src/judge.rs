@@ -1,6 +1,7 @@
 use std::fs::read_to_string;
 
 use crate::executor::ResourceUsage;
+use serde::Serialize;
 
 pub struct JudgeOption {
     pub memory_limit: u64,
@@ -9,50 +10,71 @@ pub struct JudgeOption {
     pub answer_path: Option<String>,
 }
 
-#[derive(Debug, Clone)]
-pub enum ResultKind {
+#[derive(Debug, Clone, Serialize)]
+pub enum JudgeResultType {
+    #[serde(rename = "accepted")]
     Accepted,
+    #[serde(rename = "wrong_answer")]
     WrongAnswer,
+    #[serde(rename = "time_limit_exceeded")]
     TimeLimitExceeded,
+    #[serde(rename = "memory_limit_exceeded")]
     MemoryLimitExceeded,
+    #[serde(rename = "runtime_error")]
     RuntimeError,
-    ServerError,
+    #[serde(rename = "system_error")]
+    SystemError,
 }
 
 #[derive(Debug, Clone)]
 pub struct JudgeResult {
-    pub result: ResultKind,
+    pub result: JudgeResultType,
+    pub memory: u64,
+    pub runtime: u64,
 }
 
 fn trim_last_newline(mut vec: Vec<String>) -> Vec<String> {
     if vec.last() == Some(&"\n".to_string()) {
         vec.pop();
     }
-    vec
+    vec.iter().map(|s| s.trim_end().to_string()).collect()
 }
 
 pub fn judge(exit_code: i32, rusage: ResourceUsage, option: JudgeOption) -> JudgeResult {
-    if rusage.user_time.as_millis() as u64 > (option.time_limit * 1000) {
+    let runtime = (rusage.user_time.as_millis() + rusage.cpu_time.as_millis()) as u64;
+    if runtime > option.time_limit {
         return JudgeResult {
-            result: ResultKind::TimeLimitExceeded,
+            result: JudgeResultType::TimeLimitExceeded,
+            memory: rusage.memory,
+            runtime: runtime,
         };
     }
 
-    if rusage.memory > (option.memory_limit / 1024) {
+    println!(
+        "rusage memory: {}, option memory: {}",
+        rusage.memory, option.memory_limit
+    );
+    if rusage.memory > option.memory_limit {
         return JudgeResult {
-            result: ResultKind::MemoryLimitExceeded,
+            result: JudgeResultType::MemoryLimitExceeded,
+            memory: rusage.memory,
+            runtime: runtime,
         };
     }
 
     if exit_code != 0 {
         return JudgeResult {
-            result: ResultKind::RuntimeError,
+            result: JudgeResultType::RuntimeError,
+            memory: rusage.memory,
+            runtime: runtime,
         };
     }
 
     if option.output_path.is_none() {
         return JudgeResult {
-            result: ResultKind::Accepted,
+            result: JudgeResultType::Accepted,
+            memory: rusage.memory,
+            runtime: runtime,
         };
     }
 
@@ -60,10 +82,14 @@ pub fn judge(exit_code: i32, rusage: ResourceUsage, option: JudgeOption) -> Judg
     let answer_path = option.answer_path.unwrap();
     let result = diff(&output_path, &answer_path);
 
-    JudgeResult { result }
+    JudgeResult {
+        result,
+        memory: rusage.memory,
+        runtime: runtime,
+    }
 }
 
-pub fn diff(output_path: &str, answer_path: &str) -> ResultKind {
+pub fn diff(output_path: &str, answer_path: &str) -> JudgeResultType {
     let output = read_to_string(output_path);
     let answer = read_to_string(answer_path);
     match (output, answer) {
@@ -74,16 +100,16 @@ pub fn diff(output_path: &str, answer_path: &str) -> ResultKind {
                 trim_last_newline(answer.lines().map(|l| l.to_string()).collect());
 
             if output_lines.len() != answer_lines.len() {
-                return ResultKind::WrongAnswer;
+                return JudgeResultType::WrongAnswer;
             }
 
             for i in 0..output_lines.len() {
                 if output_lines[i] != answer_lines[i] {
-                    return ResultKind::WrongAnswer;
+                    return JudgeResultType::WrongAnswer;
                 }
             }
-            ResultKind::Accepted
+            JudgeResultType::Accepted
         }
-        _ => ResultKind::ServerError,
+        _ => JudgeResultType::SystemError,
     }
 }

@@ -4,3 +4,7 @@
 # Editor files
 .idea
 .vscode
+
+# Local files
+.temp
+sandbox

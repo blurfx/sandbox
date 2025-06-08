@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::vec::Vec;
 
 use crate::{
-    executor::{execute, ExecuteOption, ResourceLimit},
+    executor::{ExecuteOption, ExecuteResult, ResourceLimit, execute},
     process::Directory,
 };
 
@@ -18,7 +18,6 @@ pub struct RunOption {
     pub file_path: String,
     pub input_path: Option<String>,
     pub output_path: Option<String>,
-    pub answer_path: Option<String>,
     pub time_limit: u64,
     pub memory_limit: u64,
     pub envs: Vec<String>,
@@ -93,7 +92,7 @@ fn get_run_flags(language: &str) -> Option<Vec<&str>> {
     map.get(language).cloned()
 }
 
-pub fn compile(opt: CompileOption) -> i32 {
+pub fn compile(opt: CompileOption) -> ExecuteResult {
     let compiler: &str;
     let compile_args: Vec<&str>;
     match get_compile_flags(&opt.language) {
@@ -130,14 +129,13 @@ pub fn compile(opt: CompileOption) -> i32 {
             }),
             input_path: None,
             output_path: None,
-            answer_path: None,
             directory: None,
             use_syscall: false,
         },
     )
 }
 
-pub fn run(opt: RunOption) -> i32 {
+pub fn run(opt: RunOption) -> ExecuteResult {
     let args = match get_run_flags(&opt.language) {
         Some(args) => args,
         None => {
@@ -156,7 +154,6 @@ pub fn run(opt: RunOption) -> i32 {
         })
         .collect();
 
-    println!("{:?}", args);
     let rlimit = ResourceLimit {
         time: opt.time_limit,
         memory: opt.memory_limit,
@@ -167,7 +164,6 @@ pub fn run(opt: RunOption) -> i32 {
         limits: Some(rlimit),
         input_path: opt.input_path.clone(),
         output_path: opt.output_path.clone(),
-        answer_path: opt.answer_path.clone(),
         directory: Some(opt.directory.clone()),
         use_syscall: true,
     };

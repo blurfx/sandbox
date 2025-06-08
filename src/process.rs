@@ -56,7 +56,7 @@ impl Process {
     pub fn args(mut self, args: Vec<&str>) -> Self {
         self.args = args
             .iter()
-            .map(|arg| CString::new(arg.clone()).unwrap())
+            .map(|arg| CString::new(*arg).unwrap())
             .collect::<Vec<CString>>();
         self
     }
