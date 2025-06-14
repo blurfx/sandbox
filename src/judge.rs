@@ -1,6 +1,7 @@
 use std::fs::read_to_string;
 
 use crate::executor::ResourceUsage;
+use crate::exit_code::ExitCode;
 use serde::Serialize;
 
 pub struct JudgeOption {
@@ -42,6 +43,15 @@ fn trim_last_newline(mut vec: Vec<String>) -> Vec<String> {
 
 pub fn judge(exit_code: i32, rusage: ResourceUsage, option: JudgeOption) -> JudgeResult {
     let runtime = (rusage.user_time.as_millis() + rusage.cpu_time.as_millis()) as u64;
+
+    if exit_code == ExitCode::MEMORY_LIMIT_EXCEEDED as i32 {
+        return JudgeResult {
+            result: JudgeResultType::MemoryLimitExceeded,
+            memory: rusage.memory,
+            runtime: runtime,
+        };
+    }
+
     if runtime > option.time_limit {
         return JudgeResult {
             result: JudgeResultType::TimeLimitExceeded,
@@ -50,10 +60,6 @@ pub fn judge(exit_code: i32, rusage: ResourceUsage, option: JudgeOption) -> Judg
         };
     }
 
-    println!(
-        "rusage memory: {}, option memory: {}",
-        rusage.memory, option.memory_limit
-    );
     if rusage.memory > option.memory_limit {
         return JudgeResult {
             result: JudgeResultType::MemoryLimitExceeded,
