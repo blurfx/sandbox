@@ -44,7 +44,7 @@ fn trim_last_newline(mut vec: Vec<String>) -> Vec<String> {
 pub fn judge(exit_code: i32, rusage: ResourceUsage, option: JudgeOption) -> JudgeResult {
     let runtime = (rusage.user_time.as_millis() + rusage.cpu_time.as_millis()) as u64;
 
-    if exit_code == ExitCode::MEMORY_LIMIT_EXCEEDED as i32 {
+    if exit_code == ExitCode::MemoryLimitExceeded as i32 {
         return JudgeResult {
             result: JudgeResultType::MemoryLimitExceeded,
             memory: rusage.memory,
