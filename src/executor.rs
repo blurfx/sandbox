@@ -116,7 +116,7 @@ pub fn execute(binary: &str, args: Vec<&str>, option: ExecuteOption) -> ExecuteR
                 rusage: resource_usage,
             }
         }
-        Err(err) => {
+        Err(_err) => {
             return ExecuteResult {
                 exit_code: ExitCode::Unknown as i32,
                 rusage: ResourceUsage {

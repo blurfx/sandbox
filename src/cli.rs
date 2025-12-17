@@ -1,5 +1,16 @@
 use clap::{Arg, Command};
 
+fn add_config_arg(app: Command) -> Command {
+    app.arg(
+        Arg::new("config")
+            .long("config")
+            .help("path to language configuration YAML (default: config.yaml)")
+            .value_name("FILE")
+            .required(false)
+            .global(true),
+    )
+}
+
 fn add_build_command(app: Command) -> Command {
     app.subcommand(
         Command::new("build")
@@ -123,6 +134,7 @@ fn add_run_command(app: Command) -> Command {
 
 pub fn init() -> Command {
     let app = Command::new("Sandbox").version("0.0.1");
+    let app = add_config_arg(app);
     let app = add_build_command(app);
     add_run_command(app)
 }

@@ -8,3 +8,5 @@
 # Local files
 .temp
 sandbox
+
+config.yaml

@@ -4,6 +4,7 @@ extern crate nix;
 
 mod cli;
 mod command;
+mod config;
 mod executor;
 mod exit_code;
 mod judge;
@@ -15,6 +16,7 @@ use std::path::PathBuf;
 use command::{CompileOption, RunOption, compile, run};
 use process::Directory;
 
+use crate::config::LanguageConfig;
 use crate::judge::{JudgeOption, JudgeResultType, judge};
 use serde::Serialize;
 
@@ -39,6 +41,16 @@ enum CommandResult {
 
 fn main() {
     let matches = cli::init().get_matches();
+    let config_path = matches
+        .get_one::<String>("config")
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| "config.yaml".to_string());
+
+    let language_config = match LanguageConfig::from_file(&config_path) {
+        Ok(config) => config,
+        Err(config::ConfigError::MissingConfig(path)) => panic!("config file not found: {}", path),
+        Err(err) => panic!("failed to load language config: {}", err),
+    };
 
     match matches.subcommand() {
         Some(("build", sub_matches)) => {
@@ -60,14 +72,16 @@ fn main() {
                 time_limit,
             };
 
-            let result = compile(option);
+            let result = compile(option, &language_config);
             print!(
                 "{}",
                 serde_json::to_string(&CommandResult::Compile {
                     exit_code: result.exit_code,
                     memory: result.rusage.memory,
-                    runtime: (result.rusage.cpu_time.as_millis()
-                        + result.rusage.user_time.as_millis()) as u64,
+                    runtime: ((result.rusage.cpu_time.as_micros()
+                        + result.rusage.user_time.as_micros()
+                        + 999)
+                        / 1000) as u64,
                 })
                 .unwrap()
             );
@@ -129,7 +143,7 @@ fn main() {
                 directory,
             };
 
-            let result = run(option);
+            let result = run(option, &language_config);
             let judge_opt = JudgeOption {
                 output_path: output_path,
                 answer_path: answer_path,
@@ -147,18 +161,6 @@ fn main() {
                 })
                 .unwrap()
             );
-            // } else {
-            //     print!(
-            //         "{}",
-            //         serde_json::to_string(&CommandResult::Run {
-            //             exit_code: result.exit_code,
-            //             memory: result.rusage.memory,
-            //             runtime: result.rusage.user_time.as_millis() as u64,
-            //             result: JudgeResultType::SystemError,
-            //         })
-            //         .unwrap()
-            //     );
-            // }
         }
         _ => {
             unreachable!("no valid subcommand given")

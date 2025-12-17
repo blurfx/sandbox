@@ -1,7 +1,7 @@
-use std::collections::HashMap;
 use std::vec::Vec;
 
 use crate::{
+    config::{CommandTemplate, LanguageConfig, LanguageKind},
     executor::{ExecuteOption, ExecuteResult, ResourceLimit, execute},
     process::Directory,
 };
@@ -24,105 +24,58 @@ pub struct RunOption {
     pub directory: Directory,
 }
 
-enum FlagToken {
-    INPUT,
-    OUTPUT,
-    BINARY,
-}
+const INPUT_TOKEN: &str = "<INPUT>";
+const OUTPUT_TOKEN: &str = "<OUTPUT>";
+const TARGET_TOKEN: &str = "<TARGET>";
 
-impl FlagToken {
-    fn value(&self) -> &str {
-        match *self {
-            FlagToken::INPUT => "<INPUT>",
-            FlagToken::OUTPUT => "<OUTPUT>",
-            FlagToken::BINARY => "<BINARY>",
-        }
-    }
-}
-
-fn get_compile_flags(language: &str) -> Option<(&str, Vec<&str>)> {
-    let map: HashMap<&str, (&str, Vec<&str>)> = [
-        (
-            "c",
-            (
-                "/usr/bin/gcc",
-                vec![
-                    "gcc",
-                    "-O2",
-                    "-Wall",
-                    "-static",
-                    "-o",
-                    FlagToken::OUTPUT.value(),
-                    FlagToken::INPUT.value(),
-                    "-lm",
-                ],
-            ),
-        ),
-        (
-            "cpp",
-            (
-                "/usr/bin/g++",
-                vec![
-                    "g++",
-                    "-O2",
-                    "-Wall",
-                    "-static",
-                    "-o",
-                    FlagToken::OUTPUT.value(),
-                    FlagToken::INPUT.value(),
-                    "-lm",
-                ],
-            ),
-        ),
-    ]
-    .iter()
-    .cloned()
-    .collect();
-
-    map.get(language).cloned()
-}
-
-fn get_run_flags(language: &str) -> Option<Vec<&str>> {
-    let map: HashMap<&str, Vec<&str>> = [
-        ("c", vec![FlagToken::BINARY.value()]),
-        ("cpp", vec![FlagToken::BINARY.value()]),
-    ]
-    .iter()
-    .cloned()
-    .collect();
-
-    map.get(language).cloned()
-}
-
-pub fn compile(opt: CompileOption) -> ExecuteResult {
-    let compiler: &str;
-    let compile_args: Vec<&str>;
-    match get_compile_flags(&opt.language) {
-        Some(flags) => {
-            compiler = flags.0;
-            compile_args = flags.1;
-        }
-        _ => {
-            panic!("unsupported language: {}", opt.language);
-        }
+fn render_command(
+    template: &CommandTemplate,
+    replacements: &[(&str, &str)],
+) -> (String, Vec<String>) {
+    let mut bin = template.bin.clone();
+    for (key, value) in replacements {
+        bin = bin.replace(key, value);
     }
 
-    let compile_args: Vec<&str> = compile_args
-        .iter()
-        .map(|arg| {
-            if *arg == FlagToken::INPUT.value() {
-                return opt.input_path.as_str();
-            } else if *arg == FlagToken::OUTPUT.value() {
-                return opt.output_path.as_str();
-            }
+    let mut args = Vec::new();
+    for arg in &template.args {
+        let mut rendered = arg.clone();
+        for (key, value) in replacements {
+            rendered = rendered.replace(key, value);
+        }
+        args.push(rendered);
+    }
 
-            *arg
-        })
-        .collect();
+    (bin, args)
+}
+
+pub fn compile(opt: CompileOption, config: &LanguageConfig) -> ExecuteResult {
+    let definition = config
+        .get_language(&opt.language)
+        .expect(&format!("unsupported language: {}", opt.language));
+
+    if definition.kind != LanguageKind::Compile {
+        panic!("language {} does not support compilation", opt.language);
+    }
+
+    let compile_template = definition
+        .compile
+        .as_ref()
+        .unwrap_or_else(|| panic!("compile command missing for {}", opt.language));
+
+    let (bin, args) = render_command(
+        compile_template,
+        &[
+            (INPUT_TOKEN, opt.input_path.as_str()),
+            (OUTPUT_TOKEN, opt.output_path.as_str()),
+        ],
+    );
+
+    let arg_refs: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
 
     execute(
-        compiler,
-        compile_args,
+        bin.as_str(),
+        arg_refs,
         ExecuteOption {
             envs: None,
             limits: Some(ResourceLimit {
@@ -137,24 +90,13 @@ pub fn compile(opt: CompileOption) -> ExecuteResult {
     )
 }
 
-pub fn run(opt: RunOption) -> ExecuteResult {
-    let args = match get_run_flags(&opt.language) {
-        Some(args) => args,
-        None => {
-            panic!("unsupported language: {}", opt.language);
-        }
-    };
+pub fn run(opt: RunOption, config: &LanguageConfig) -> ExecuteResult {
+    let definition = config
+        .get_language(&opt.language)
+        .expect(&format!("unsupported language: {}", opt.language));
 
-    let args: Vec<&str> = args
-        .iter()
-        .map(|arg| {
-            if *arg == FlagToken::BINARY.value() {
-                return opt.file_path.as_str();
-            }
-
-            *arg
-        })
-        .collect();
+    let (bin, args) = render_command(&definition.run, &[(TARGET_TOKEN, opt.file_path.as_str())]);
+    let arg_refs: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
 
     let rlimit = ResourceLimit {
         time: opt.time_limit,
@@ -170,5 +112,5 @@ pub fn run(opt: RunOption) -> ExecuteResult {
         use_syscall: true,
     };
 
-    execute(&opt.file_path, args, option)
+    execute(bin.as_str(), arg_refs, option)
 }

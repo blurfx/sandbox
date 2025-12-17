@@ -1,5 +1,6 @@
 use std::{convert::TryInto, ffi::CString, path::PathBuf};
 
+use nix::sched::{CpuSet, sched_getaffinity, sched_setaffinity};
 use nix::{libc, unistd};
 
 use crate::seccomp::SyscallFilter;
@@ -166,6 +167,10 @@ impl Process {
     }
 
     pub fn run(&self) -> i32 {
+        if self.syscall_filters.is_some() {
+            self.disable_thp();
+            self.pin_to_single_cpu();
+        }
         self.setrlimit();
         self.chroot();
         if self.syscall_filters.is_some() {
@@ -189,6 +194,58 @@ impl Process {
                 println!("execve failed: {}", e);
                 50000
             }
+        }
+    }
+
+    fn pin_to_single_cpu(&self) {
+        let pid = unistd::Pid::from_raw(0);
+        let allowed = match sched_getaffinity(pid) {
+            Ok(cpuset) => cpuset,
+            Err(_) => return,
+        };
+
+        let mut cpu0_allowed = false;
+        let mut chosen_cpu = None;
+
+        for cpu in 0..CpuSet::count() {
+            let is_allowed = match allowed.is_set(cpu) {
+                Ok(value) => value,
+                Err(_) => continue,
+            };
+            if !is_allowed {
+                continue;
+            }
+
+            if cpu == 0 {
+                cpu0_allowed = true;
+                continue;
+            }
+
+            chosen_cpu = Some(cpu);
+            break;
+        }
+
+        let cpu = match chosen_cpu {
+            Some(cpu) => cpu,
+            None => {
+                if cpu0_allowed {
+                    0
+                } else {
+                    return;
+                }
+            }
+        };
+
+        let mut single = CpuSet::new();
+        if single.set(cpu).is_err() {
+            return;
+        }
+        let _ = sched_setaffinity(pid, &single);
+    }
+
+    fn disable_thp(&self) {
+        unsafe {
+            libc::prctl(libc::PR_SET_THP_DISABLE, 1, 0, 0, 0);
         }
     }
 }

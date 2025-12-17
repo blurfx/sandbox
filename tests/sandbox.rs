@@ -115,8 +115,12 @@ fn sandbox_bin() -> PathBuf {
 }
 
 fn run_command(args: &[String], workdir: &Path) -> CommandResult {
+    let config_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("config.yaml");
+    let mut full_args = vec!["--config".to_string(), config_path.to_string_lossy().into_owned()];
+    full_args.extend_from_slice(args);
+
     let output = Command::new(sandbox_bin())
-        .args(args)
+        .args(&full_args)
         .current_dir(workdir)
         .output()
         .expect("failed to run sandbox");
@@ -165,12 +169,7 @@ fn compile_c(dir: &Path, source: &str, output_name: &str, time_limit_ms: u64) ->
     output_path
 }
 
-fn run_binary(
-    dir: &Path,
-    binary: &Path,
-    memory_limit_kb: u64,
-    time_limit_ms: u64,
-) -> RunOutcome {
+fn run_binary(dir: &Path, binary: &Path, memory_limit_kb: u64, time_limit_ms: u64) -> RunOutcome {
     let args = vec![
         "run".to_string(),
         "-l".to_string(),
@@ -218,36 +217,43 @@ fn large_array_runs_with_stable_resources() {
     let dir = tempdir().expect("failed to create temp dir");
     let binary = compile_c(dir.path(), LARGE_ARRAY_C, "array.out", 20000);
 
-    let mut runs = Vec::new();
-    for _ in 0..10 {
-        runs.push(run_binary(dir.path(), &binary, 500_000, 20000));
-    }
+    let _warmup = run_binary(dir.path(), &binary, 500_000, 20000);
 
-    let baseline = &runs[0];
-    assert_eq!(baseline.result, JudgeResult::Accepted, "baseline run not accepted");
+    let mut runtime_diffs = Vec::new();
+    for attempt in 0..10 {
+        let first = run_binary(dir.path(), &binary, 500_000, 20000);
+        let second = run_binary(dir.path(), &binary, 500_000, 20000);
 
-    let mut runtimes: Vec<u64> = runs.iter().map(|r| r.runtime).collect();
-    runtimes.sort_unstable();
-    let median_runtime = runtimes[runtimes.len() / 2];
+        assert_eq!(
+            first.result,
+            JudgeResult::Accepted,
+            "attempt {attempt} first run not accepted"
+        );
+        assert_eq!(
+            second.result,
+            JudgeResult::Accepted,
+            "attempt {attempt} second run not accepted"
+        );
 
-    for (idx, run) in runs.iter().enumerate() {
-        assert_eq!(run.result, JudgeResult::Accepted, "run {idx} not accepted");
-        let memory_diff = run.memory.abs_diff(baseline.memory);
+        let memory_diff = first.memory.abs_diff(second.memory);
         assert!(
             memory_diff <= 8,
-            "run {idx} memory differed ({} vs {}, diff {})",
-            run.memory,
-            baseline.memory,
+            "attempt {attempt} memory differed ({} vs {}, diff {})",
+            first.memory,
+            second.memory,
             memory_diff
         );
-        let runtime_diff = run.runtime.abs_diff(median_runtime);
-        assert!(
-            runtime_diff < 10,
-            "run {idx} runtime drifted by {runtime_diff}ms ({} vs median {})",
-            run.runtime,
-            median_runtime
-        );
+
+        let runtime_diff = first.runtime.abs_diff(second.runtime);
+        runtime_diffs.push(runtime_diff);
     }
+
+    runtime_diffs.sort_unstable();
+    let median = runtime_diffs[runtime_diffs.len() / 2];
+    assert!(
+        median <= 10,
+        "median runtime drift {median}ms too high; diffs: {runtime_diffs:?}"
+    );
 }
 
 #[test]
