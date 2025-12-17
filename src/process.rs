@@ -7,9 +7,9 @@ use crate::seccomp::SyscallFilter;
 
 #[repr(u32)]
 pub enum Resource {
-    AddressSpace = libc::RLIMIT_AS as u32,
-    CPUTime = libc::RLIMIT_CPU as u32,
-    CoreDump = libc::RLIMIT_CORE as u32,
+    AddressSpace = libc::RLIMIT_AS,
+    CPUTime = libc::RLIMIT_CPU,
+    CoreDump = libc::RLIMIT_CORE,
 }
 
 #[derive(Clone)]
@@ -65,7 +65,7 @@ impl Process {
     pub fn envs(mut self, envs: Vec<String>) -> Self {
         self.envs = envs
             .iter()
-            .map(|env| CString::new(format!("{}", env)).unwrap())
+            .map(|env| CString::new(env.to_string()).unwrap())
             .collect::<Vec<CString>>();
         self
     }

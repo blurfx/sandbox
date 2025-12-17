@@ -52,7 +52,7 @@ fn render_command(
 pub fn compile(opt: CompileOption, config: &LanguageConfig) -> ExecuteResult {
     let definition = config
         .get_language(&opt.language)
-        .expect(&format!("unsupported language: {}", opt.language));
+        .unwrap_or_else(|_| panic!("unsupported language: {}", opt.language));
 
     if definition.kind != LanguageKind::Compile {
         panic!("language {} does not support compilation", opt.language);
@@ -93,7 +93,7 @@ pub fn compile(opt: CompileOption, config: &LanguageConfig) -> ExecuteResult {
 pub fn run(opt: RunOption, config: &LanguageConfig) -> ExecuteResult {
     let definition = config
         .get_language(&opt.language)
-        .expect(&format!("unsupported language: {}", opt.language));
+        .unwrap_or_else(|_| panic!("unsupported language: {}", opt.language));
 
     let (bin, args) = render_command(&definition.run, &[(TARGET_TOKEN, opt.file_path.as_str())]);
     let arg_refs: Vec<&str> = args.iter().map(|s| s.as_str()).collect();

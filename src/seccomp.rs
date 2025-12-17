@@ -12,7 +12,7 @@ impl SyscallFilterAction {
         match self {
             SyscallFilterAction::Allow => seccomp_sys::SCMP_ACT_ALLOW,
             SyscallFilterAction::Kill => seccomp_sys::SCMP_ACT_KILL,
-            SyscallFilterAction::Err(errno) => errno.clone(),
+            SyscallFilterAction::Err(errno) => *errno,
         }
     }
 }

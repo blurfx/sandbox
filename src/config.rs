@@ -28,13 +28,11 @@ impl CommandTemplate {
         ];
 
         for shell in &dangerous_shells {
-            if bin_lower.contains(shell) {
-                if self.args.iter().any(|arg| arg.trim() == "-c") {
-                    return Err(format!(
-                        "{}: using shell '{}' with '-c' flag is prohibited (shell injection risk)",
-                        context, shell
-                    ));
-                }
+            if bin_lower.contains(shell) && self.args.iter().any(|arg| arg.trim() == "-c") {
+                return Err(format!(
+                    "{}: using shell '{}' with '-c' flag is prohibited (shell injection risk)",
+                    context, shell
+                ));
             }
         }
 

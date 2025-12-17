@@ -20,7 +20,9 @@ enum JudgeResult {
 enum CommandResult {
     Compile {
         exit_code: i32,
+        #[allow(dead_code)]
         memory: u64,
+        #[allow(dead_code)]
         runtime: u64,
     },
     Run {
@@ -116,7 +118,10 @@ fn sandbox_bin() -> PathBuf {
 
 fn run_command(args: &[String], workdir: &Path) -> CommandResult {
     let config_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("config.yaml");
-    let mut full_args = vec!["--config".to_string(), config_path.to_string_lossy().into_owned()];
+    let mut full_args = vec![
+        "--config".to_string(),
+        config_path.to_string_lossy().into_owned(),
+    ];
     full_args.extend_from_slice(args);
 
     let output = Command::new(sandbox_bin())

@@ -73,15 +73,15 @@ fn main() {
             };
 
             let result = compile(option, &language_config);
+            let runtime_micros =
+                result.rusage.cpu_time.as_micros() + result.rusage.user_time.as_micros();
+            let runtime = runtime_micros.div_ceil(1000) as u64;
             print!(
                 "{}",
                 serde_json::to_string(&CommandResult::Compile {
                     exit_code: result.exit_code,
                     memory: result.rusage.memory,
-                    runtime: ((result.rusage.cpu_time.as_micros()
-                        + result.rusage.user_time.as_micros()
-                        + 999)
-                        / 1000) as u64,
+                    runtime,
                 })
                 .unwrap()
             );
@@ -92,18 +92,15 @@ fn main() {
                 .unwrap()
                 .to_string();
             let file_path = sub_matches.get_one::<String>("file").unwrap().to_string();
-            let input_path = match sub_matches.get_one::<String>("input") {
-                Some(input) => Some(input.to_string()),
-                None => None,
-            };
-            let output_path = match sub_matches.get_one::<String>("output") {
-                Some(output) => Some(output.to_string()),
-                None => None,
-            };
-            let answer_path = match sub_matches.get_one::<String>("answer") {
-                Some(answer) => Some(answer.to_string()),
-                None => None,
-            };
+            let input_path = sub_matches
+                .get_one::<String>("input")
+                .map(|s| s.to_string());
+            let output_path = sub_matches
+                .get_one::<String>("output")
+                .map(|s| s.to_string());
+            let answer_path = sub_matches
+                .get_one::<String>("answer")
+                .map(|s| s.to_string());
             let time_limit: u64 = sub_matches
                 .get_one::<String>("time_limit")
                 .unwrap()
@@ -114,14 +111,8 @@ fn main() {
                 .unwrap()
                 .parse()
                 .unwrap();
-            let working_dir = match sub_matches.get_one::<String>("workdir") {
-                Some(path) => Some(PathBuf::from(path)),
-                _ => None,
-            };
-            let root_dir = match sub_matches.get_one::<String>("rootdir") {
-                Some(path) => Some(PathBuf::from(path)),
-                _ => None,
-            };
+            let working_dir = sub_matches.get_one::<String>("workdir").map(PathBuf::from);
+            let root_dir = sub_matches.get_one::<String>("rootdir").map(PathBuf::from);
             let directory = Directory {
                 working_dir,
                 root_dir,
@@ -145,10 +136,10 @@ fn main() {
 
             let result = run(option, &language_config);
             let judge_opt = JudgeOption {
-                output_path: output_path,
-                answer_path: answer_path,
-                time_limit: time_limit,
-                memory_limit: memory_limit,
+                output_path,
+                answer_path,
+                time_limit,
+                memory_limit,
             };
             let judge_result = judge(result.exit_code, result.rusage, judge_opt);
             print!(
