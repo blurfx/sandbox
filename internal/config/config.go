@@ -80,7 +80,12 @@ func ParseFlags() (*Config, error) {
 	flag.Int64Var(&cfg.DiskLimit, "disk-limit", cfg.DiskLimit, "Disk limit in MB")
 	flag.Int64Var(&cfg.StackLimit, "stack-limit", cfg.StackLimit, "Stack size limit in KB")
 	flag.IntVar(&cfg.OpenFiles, "open-files", cfg.OpenFiles, "Maximum number of open files")
-	flag.IntVar(&cfg.MaxProcesses, "max-processes", cfg.MaxProcesses, "Maximum number of processes")
+	flag.IntVar(
+		&cfg.MaxProcesses,
+		"max-processes",
+		cfg.MaxProcesses,
+		"Maximum number of tasks (processes/threads) for the executed program",
+	)
 	flag.StringVar(&cfg.InputFile, "input", "", "Path to input file (stdin)")
 	flag.StringVar(&cfg.OutputFile, "output", "", "Path to output file (stdout)")
 

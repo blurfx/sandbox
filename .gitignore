@@ -7,6 +7,6 @@
 
 # Local files
 .temp
-sandbox
+/sandbox
 
 config.yaml
